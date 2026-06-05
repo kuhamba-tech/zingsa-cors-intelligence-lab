@@ -1,0 +1,26 @@
+{
+  "name": "zingsa-cors-intelligence-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ZINGSA Space Science — demo & live ionospheric perturbation monitoring",
+  "homepage": "https://github.com/kuhamba-tech",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kuhamba-tech"
+  },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.469.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0",
+    "vite": "^6.0.7"
+  }
+}

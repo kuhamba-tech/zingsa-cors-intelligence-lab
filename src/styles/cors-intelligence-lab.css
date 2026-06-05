@@ -1,0 +1,71 @@
+/* ZINGSA CORS Intelligence Lab */
+.cil-page {
+  --cil-orange: #ff8c00;
+  --cil-cyan: #22d3ee;
+  --cil-border: rgba(127, 119, 221, 0.18);
+  --cil-panel: rgba(255, 255, 255, 0.025);
+  --cil-text: #e2e8f0;
+  --cil-muted: #94a3b8;
+  color: var(--cil-text);
+  background: linear-gradient(180deg, #03071f 0%, #0a0e2a 40%, #060a1a 100%);
+  min-height: 100vh;
+  padding-bottom: 48px;
+}
+.cil-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--cil-border); background: rgba(0,0,0,0.35); flex-wrap: wrap; }
+.cil-header-title { font-size: 1.1rem; font-weight: 900; background: linear-gradient(90deg, var(--cil-orange), #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.cil-live-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.45); border-radius: 20px; padding: 5px 14px; font-size: 0.72rem; font-weight: 800; color: #ef4444; }
+.cil-live-badge.demo { background: rgba(234,179,8,0.12); border-color: rgba(234,179,8,0.4); color: #eab308; }
+.cil-live-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: cil-pulse 2s ease-in-out infinite; }
+@keyframes cil-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.cil-breadcrumb { padding: 10px 24px; font-size: 0.72rem; color: var(--cil-muted); border-bottom: 1px solid rgba(255,255,255,0.04); }
+.cil-breadcrumb span { color: var(--cil-orange); }
+.cil-alert-bar { background: rgba(239,68,68,0.08); border-bottom: 1px solid rgba(239,68,68,0.3); padding: 10px 24px; font-size: 0.78rem; color: #fca5a5; display: flex; gap: 10px; }
+.cil-alert-bar strong { color: #ef4444; white-space: nowrap; }
+.cil-body { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+.cil-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; align-items: end; background: var(--cil-panel); border: 1px solid var(--cil-border); border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+.cil-controls label { display: block; font-size: 0.62rem; font-weight: 800; color: var(--cil-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+.cil-controls select, .cil-controls input { width: 100%; background: #1e1b3a; border: 1px solid rgba(127,119,221,0.22); border-radius: 8px; padding: 10px 12px; color: var(--cil-text); font-size: 0.82rem; outline: none; color-scheme: dark; }
+.cil-run-btn { background: linear-gradient(135deg, rgba(255,140,0,0.9), rgba(239,99,39,0.9)); border: 1px solid rgba(255,140,0,0.5); border-radius: 10px; padding: 11px 24px; color: #fff; font-weight: 800; font-size: 0.88rem; cursor: pointer; }
+.cil-run-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.cil-mode-toggle { display: flex; gap: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 4px; }
+.cil-mode-btn { border: 1px solid transparent; border-radius: 7px; padding: 6px 14px; font-weight: 800; font-size: 0.72rem; cursor: pointer; background: transparent; color: #6b7280; }
+.cil-mode-btn.active-demo { background: rgba(234,179,8,0.2); border-color: rgba(234,179,8,0.5); color: #eab308; }
+.cil-mode-btn.active-live { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5); color: #ef4444; }
+.cil-section-title { font-size: 0.95rem; font-weight: 900; margin: 0 0 14px; }
+.cil-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.cil-tab { background: rgba(255,255,255,0.03); border: 1px solid var(--cil-border); border-radius: 8px; padding: 8px 16px; font-size: 0.78rem; font-weight: 700; color: var(--cil-muted); cursor: pointer; }
+.cil-tab.active { background: rgba(255,140,0,0.12); border-color: rgba(255,140,0,0.45); color: var(--cil-orange); }
+.cil-method-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.cil-method-card { background: var(--cil-panel); border: 1px solid var(--cil-border); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.22s; }
+.cil-method-card:hover, .cil-method-card.selected { border-color: rgba(255,140,0,0.55); background: rgba(255,140,0,0.06); transform: translateY(-2px); }
+.cil-method-card .icon { font-size: 1.5rem; margin-bottom: 8px; }
+.cil-method-card h4 { margin: 0 0 6px; font-size: 0.85rem; font-weight: 800; }
+.cil-method-card p { margin: 0; font-size: 0.73rem; color: var(--cil-muted); line-height: 1.55; }
+.cil-integrity-section { background: var(--cil-panel); border: 1px solid var(--cil-border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+.cil-integrity-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.cil-integrity-card { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; }
+.cil-integrity-card .label { font-size: 0.62rem; color: var(--cil-muted); font-weight: 700; text-transform: uppercase; }
+.cil-integrity-card .value { font-size: 1.1rem; font-weight: 900; margin: 4px 0 2px; }
+.cil-integrity-card .sub { font-size: 0.68rem; color: var(--cil-muted); }
+.cil-station-bar { display: flex; gap: 3px; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+.cil-station-seg { flex: 1; min-width: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.85); }
+.cil-summary { font-size: 0.78rem; color: var(--cil-muted); line-height: 1.65; padding: 12px 14px; background: rgba(34,211,238,0.04); border: 1px solid rgba(34,211,238,0.15); border-radius: 10px; }
+.cil-main-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-bottom: 20px; }
+@media (max-width: 900px) { .cil-main-grid { grid-template-columns: 1fr; } }
+.cil-map-wrap { min-height: 380px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(34,211,238,0.2); }
+.cil-metrics-panel { background: var(--cil-panel); border: 1px solid var(--cil-border); border-radius: 14px; padding: 18px; }
+.cil-metric-row { margin-bottom: 14px; }
+.cil-metric-row .row-head { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.cil-metric-row .row-label { font-size: 0.72rem; color: var(--cil-muted); }
+.cil-metric-row .row-value { font-size: 0.82rem; font-weight: 800; }
+.cil-metric-row .row-note { font-size: 0.58rem; color: #4b5563; margin-top: 2px; }
+.cil-metric-bar { height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+.cil-metric-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+.cil-footer { border-top: 1px solid var(--cil-border); padding: 20px 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
+.cil-footer a { font-size: 0.72rem; color: var(--cil-cyan); text-decoration: none; }
+.cil-footer a:hover { text-decoration: underline; }
+.cil-sparkline { width: 100%; height: 28px; display: block; }
+.cil-subnav { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.cil-subnav button { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 5px 12px; font-size: 0.68rem; color: var(--cil-muted); cursor: pointer; }
+.cil-subnav button.active { color: var(--cil-cyan); border-color: rgba(34,211,238,0.35); }
+.cil-embedded-lab { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--cil-border); }
