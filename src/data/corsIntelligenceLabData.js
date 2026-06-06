@@ -58,14 +58,10 @@ export const LAB_STATIONS = {
 
 export const ANALYSIS_TABS = [
   { id: 'monitoring', label: 'Region Monitoring' },
-  { id: 'emergency', label: 'Emergency Response' },
-  { id: 'crop-marine', label: 'Crop & Marine Security' },
 ];
 
 export const ANALYSIS_METHODS = [
   { id: 'location', tab: 'monitoring', icon: '📍', title: 'Location-based analysis', desc: 'CORS and ionospheric analysis for a specific African region or ZINGSA station corridor.' },
-  { id: 'emergency', tab: 'emergency', icon: '🚨', title: 'Emergency Response', desc: 'Rapid GNSS integrity and space weather assessment for floods, fires, and disaster zones.' },
-  { id: 'crop-marine', tab: 'crop-marine', icon: '🌾', title: 'Crop & Marine Security', desc: 'Precision agriculture and maritime positioning risk from ionospheric perturbations.' },
   { id: 'monitoring', tab: 'monitoring', icon: '📡', title: 'Monitoring & Analysis', desc: 'Real-time CORS health, TEC, scintillation, and ionospheric perturbation (IP) index.' },
 ];
 

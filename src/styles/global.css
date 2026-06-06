@@ -11,3 +11,205 @@ html, body, #root {
 
 button, select, input { font-family: inherit; }
 
+.dashboard-page {
+  width: min(1400px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+
+.dashboard-hero {
+  min-height: 260px;
+  border: 1px solid rgba(127, 119, 221, 0.22);
+  background:
+    radial-gradient(circle at 15% 20%, rgba(167, 139, 250, 0.18), transparent 34%),
+    radial-gradient(circle at 86% 18%, rgba(34, 211, 238, 0.14), transparent 30%),
+    linear-gradient(135deg, rgba(8, 13, 41, 0.95), rgba(3, 7, 31, 0.98));
+  border-radius: 8px;
+  padding: 34px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  overflow: hidden;
+}
+
+.dashboard-hero-copy {
+  max-width: 760px;
+}
+
+.dashboard-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: #a5b4fc;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.dashboard-hero h1 {
+  margin: 0 0 12px;
+  color: #f8fafc;
+  font-size: clamp(2rem, 4vw, 4.3rem);
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+.dashboard-hero p {
+  margin: 0;
+  max-width: 650px;
+  color: #a7b3c9;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.dashboard-hero-status {
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(29, 158, 117, 0.34);
+  border-radius: 8px;
+  background: rgba(29, 158, 117, 0.1);
+  color: #6ee7b7;
+}
+
+.dashboard-hero-status span,
+.dashboard-status-card span,
+.dashboard-link-head span {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.dashboard-hero-status strong {
+  display: block;
+  margin-top: 2px;
+  color: #f8fafc;
+  font-size: 1.05rem;
+}
+
+.dashboard-status-grid,
+.dashboard-link-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-status-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 18px 0;
+}
+
+.dashboard-status-card,
+.dashboard-link-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 8px;
+}
+
+.dashboard-status-card {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+}
+
+.dashboard-card-icon,
+.dashboard-link-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.dashboard-status-card strong {
+  display: block;
+  margin: 5px 0;
+  color: var(--accent);
+  font-size: 1.25rem;
+}
+
+.dashboard-status-card p,
+.dashboard-link-card p {
+  margin: 0;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.dashboard-link-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-link-card {
+  padding: 22px;
+}
+
+.dashboard-link-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dashboard-link-card h2 {
+  margin: 0 0 10px;
+  color: #f8fafc;
+  font-size: 1.25rem;
+  letter-spacing: 0;
+}
+
+.dashboard-link-card button {
+  width: 100%;
+  margin-top: 22px;
+  padding: 11px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dashboard-link-card button:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (max-width: 900px) {
+  .dashboard-hero {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 26px;
+  }
+
+  .dashboard-status-grid,
+  .dashboard-link-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-page {
+    width: min(100% - 20px, 1400px);
+    padding-top: 14px;
+  }
+
+  .dashboard-hero {
+    padding: 22px;
+  }
+
+  .dashboard-hero-status {
+    width: 100%;
+  }
+}
+

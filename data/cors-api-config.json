@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "provider": "ZINGSA Space Science CORS Intelligence Lab",
+  "dataSources": [
+    {
+      "id": "gnss-apps",
+      "label": "Leica Spider GNSS Data",
+      "path": "C:\\Users\\Tapiwa\\Documents\\Timothy\\ZINGSA\\Space Science\\CORS Data\\GNSS-Data\\APPS\\Spider",
+      "type": "spider"
+    },
+    {
+      "id": "tec-analysis",
+      "label": "TEC Analysis Archives",
+      "path": "C:\\Users\\Tapiwa\\Documents\\Timothy\\ZINGSA\\Space Science\\TEC ANAlYSIS",
+      "type": "tec-doy"
+    }
+  ],
+  "apiRoutes": {
+    "/api/cors/catalog": "GET — list indexed CORS archives",
+    "/api/cors/ingest": "POST — scan/unzip archives (?source=gnss-apps)",
+    "/api/cors/analyze": "GET — demo analysis (?station=BEIT&date=2025-05-06&source=gnss-apps)"
+  }
+}

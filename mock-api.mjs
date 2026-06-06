@@ -1,11 +1,12 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
+import { API_ROUTES } from './lib/corsApiConfig.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function loadHandler(relPath) {
-  const mod = await import(join(__dirname, relPath));
+  const abs = join(__dirname, relPath);
+  const mod = await import(pathToFileURL(abs).href);
   return mod.default;
 }
 
@@ -15,11 +16,7 @@ export function mockApiPlugin() {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url?.split('?')[0];
-        const routes = {
-          '/api/gnss/station-health': './api/gnss/station-health.js',
-          '/api/space-weather/africa': './api/space-weather/africa.js',
-        };
-        const handlerPath = routes[url];
+        const handlerPath = API_ROUTES[url];
         if (!handlerPath) return next();
 
         try {
