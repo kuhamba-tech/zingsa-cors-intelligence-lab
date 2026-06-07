@@ -11,19 +11,21 @@
 .cas-nav {
   display: flex;
   align-items: center;
-  gap: 0;
-  padding: 0 20px;
+  gap: 12px;
+  padding: 0 14px;
   background: #161b22;
   border-bottom: 1px solid rgba(255,255,255,0.08);
   min-height: 56px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .cas-nav-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-right: 28px;
+  gap: 10px;
+  margin-right: 10px;
   flex-shrink: 0;
 }
 
@@ -48,34 +50,37 @@
   text-transform: uppercase;
 }
 .cas-nav-title span {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   color: #1D9E75;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .cas-nav-tabs {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .cas-nav-tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 5px;
+  padding: 8px 9px;
   border: none;
   background: none;
   color: #94a3b8;
-  font-size: 0.75rem;
+  font-size: clamp(0.62rem, 0.92vw, 0.72rem);
   font-weight: 600;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: color 0.15s, border-color 0.15s;
   white-space: nowrap;
   font-family: inherit;
+  flex: 0 0 auto;
 }
 
 .cas-nav-tab:hover { color: #e2e8f0; }
@@ -879,10 +884,11 @@
 }
 
 .cas-tab-title {
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  font-weight: 900;
+  line-height: 1.1;
   color: #f1f5f9;
-  margin: 0 0 3px;
+  margin: 0 0 6px;
 }
 
 .cas-tab-subtitle {
@@ -909,6 +915,40 @@
   transition: background 0.15s;
 }
 .cas-btn-primary:hover { background: rgba(59,130,246,0.25); }
+
+.cas-time-window-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px 12px;
+  border: 1px solid rgba(34,211,238,0.28);
+  border-radius: 8px;
+  background: rgba(34,211,238,0.08);
+  color: #94a3b8;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cas-time-window-control select {
+  min-width: 128px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  background: #111827;
+  color: #e0faff;
+  padding: 7px 28px 7px 10px;
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  color-scheme: dark;
+}
+
+.cas-time-window-control select:focus {
+  outline: 2px solid rgba(34,211,238,0.35);
+  outline-offset: 2px;
+}
 
 /* Filter bar */
 .cas-filter-bar {
@@ -1159,7 +1199,20 @@
   margin-bottom: 14px;
 }
 
-@media (max-width: 900px) { .cas-kpi-row { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 900px) {
+  .cas-kpi-row { grid-template-columns: repeat(2,1fr); }
+}
+
+@media (max-width: 640px) {
+  .cas-time-window-control {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .cas-time-window-control select {
+    flex: 1;
+  }
+}
 
 .cas-kpi-card {
   background: #161b22;
@@ -1292,3 +1345,443 @@
 .cas-info-row:last-child { border-bottom: none; }
 .cas-info-label { color: #64748b; flex-shrink: 0; }
 .cas-info-value { color: #f1f5f9; font-weight: 600; text-align: right; }
+
+/* Analysis tab */
+.cas-analysis-panel {
+  background: rgba(3, 12, 30, 0.78);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.cas-analysis-title {
+  color: #f1f5f9;
+  font-size: 0.9rem;
+  font-weight: 900;
+  margin-bottom: 16px;
+}
+
+.cas-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cas-analysis-card,
+.cas-recommendation-card,
+.cas-analysis-metric {
+  background: rgba(7, 21, 45, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+}
+
+.cas-analysis-card {
+  padding: 14px 16px;
+  min-height: 140px;
+}
+
+.cas-analysis-card h3 {
+  margin: 0 0 10px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cas-analysis-card p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.65;
+}
+
+.cas-analysis-card.cyan { border-color: rgba(34, 211, 238, 0.24); }
+.cas-analysis-card.cyan h3 { color: #22d3ee; }
+.cas-analysis-card.orange { border-color: rgba(245, 158, 11, 0.24); }
+.cas-analysis-card.orange h3 { color: #f59e0b; }
+.cas-analysis-card.red { border-color: rgba(239, 68, 68, 0.24); }
+.cas-analysis-card.red h3 { color: #ef4444; }
+.cas-analysis-card.green { border-color: rgba(34, 197, 94, 0.24); }
+.cas-analysis-card.green h3 { color: #22c55e; }
+.cas-analysis-card.violet { border-color: rgba(167, 139, 250, 0.24); }
+.cas-analysis-card.violet h3 { color: #a78bfa; }
+
+.cas-recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cas-recommendation-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 14px;
+}
+
+.cas-recommendation-card span {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: rgba(29, 158, 117, 0.22);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.cas-recommendation-card p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.cas-analysis-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cas-analysis-metric {
+  padding: 14px 16px;
+}
+
+.cas-analysis-metric span {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cas-analysis-metric strong {
+  color: #22d3ee;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+@media (max-width: 1200px) {
+  .cas-analysis-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cas-recommendation-grid,
+  .cas-analysis-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 700px) {
+  .cas-analysis-grid,
+  .cas-recommendation-grid,
+  .cas-analysis-metrics { grid-template-columns: 1fr; }
+}
+
+/* GNSS Intelligence Dashboard */
+.cas-gnss-intel {
+  background: #161b22;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.cas-gnss-subtitle {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.cas-gnss-pill {
+  padding: 5px 12px;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.1);
+  color: #22d3ee;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.cas-gnss-body {
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.cas-gnss-monitor-title {
+  color: #f1f5f9;
+  font-size: 0.82rem;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.cas-gnss-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cas-gnss-monitor-card {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.cas-gnss-monitor-card span {
+  display: block;
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.cas-gnss-monitor-card strong {
+  color: #22d3ee;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.cas-availability-head {
+  display: grid;
+  grid-template-columns: 220px minmax(520px, 1fr);
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 10px;
+  min-width: 820px;
+}
+
+.cas-availability-head p {
+  margin: -6px 0 0;
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.cas-months,
+.cas-availability-months {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(32px, 1fr));
+  gap: 7px;
+}
+
+.cas-months {
+  color: #64748b;
+  font-size: 0.57rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.cas-availability-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 0 0 12px 232px;
+  min-width: 588px;
+  color: #94a3b8;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.cas-availability-legend strong {
+  color: #e2e8f0;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+}
+
+.cas-availability-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.cas-availability-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.cas-availability-legend i.excellent { background: #22c55e; }
+.cas-availability-legend i.good { background: #1D9E75; }
+.cas-availability-legend i.watch { background: #f59e0b; }
+
+.cas-availability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cas-availability-row {
+  display: grid;
+  grid-template-columns: 220px minmax(520px, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  min-width: 820px;
+}
+
+.cas-availability-station strong {
+  display: block;
+  color: #f1f5f9;
+  font-size: 0.78rem;
+}
+
+.cas-availability-station span {
+  display: block;
+  color: #64748b;
+  font-size: 0.64rem;
+  margin-top: 2px;
+}
+
+.cas-availability-months span {
+  height: 24px;
+  border-radius: 4px;
+  background: #334155;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+.cas-availability-months span.excellent { background: #22c55e; }
+.cas-availability-months span.good { background: #1D9E75; }
+.cas-availability-months span.watch { background: #f59e0b; }
+
+.cas-availability-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cas-availability-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #1D9E75, #22d3ee);
+  border-radius: inherit;
+}
+
+.cas-availability-value {
+  color: #22c55e;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.cas-year-average {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  min-width: 820px;
+}
+
+.cas-year-average-title {
+  margin-bottom: 10px;
+  color: #f1f5f9;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cas-year-average-row {
+  display: grid;
+  grid-template-columns: 70px minmax(280px, 1fr) 58px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cas-year-average-row strong {
+  color: #f8fafc;
+  font-size: 0.72rem;
+}
+
+.cas-year-average-row span {
+  color: #22c55e;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: right;
+}
+
+@media (max-width: 1100px) {
+  .cas-gnss-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .cas-availability-row {
+    grid-template-columns: 170px minmax(470px, 1fr);
+    min-width: 660px;
+  }
+
+  .cas-availability-head {
+    grid-template-columns: 170px minmax(470px, 1fr);
+    min-width: 660px;
+  }
+
+  .cas-availability-legend {
+    margin-left: 182px;
+    min-width: 478px;
+  }
+
+  .cas-year-average {
+    min-width: 660px;
+  }
+}
+
+.cas-map-tile-switcher {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 500;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(8, 14, 31, 0.88);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.cas-map-tile-btn {
+  min-width: 64px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.62rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.cas-map-tile-btn:hover,
+.cas-map-tile-btn.active {
+  background: rgba(34, 211, 238, 0.18);
+  border-color: rgba(34, 211, 238, 0.48);
+  color: #e0faff;
+}
+
+@media (max-width: 700px) {
+  .cas-map-tile-switcher {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    justify-content: center;
+  }
+
+  .cas-map-tile-btn {
+    min-width: 0;
+    flex: 1;
+  }
+}

@@ -3,24 +3,24 @@ import L from 'leaflet';
 export const AFRICA_TILE_LAYERS = {
   hybrid: {
     label: 'Satellite + labels',
-    short: '🛰️ Hybrid',
+    short: 'Hybrid',
     url: 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
     subdomains: '0123',
-    attribution: '© Google',
+    attribution: 'Google',
     maxZoom: 20,
   },
   satellite: {
     label: 'Satellite imagery',
-    short: '🌍 Satellite',
+    short: 'Satellite',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: '© Esri',
+    attribution: 'Esri',
     maxZoom: 19,
   },
   street: {
     label: 'Street map',
-    short: '🗺️ Street',
+    short: 'Street',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles © Esri · © OpenStreetMap',
+    attribution: 'Tiles Esri / OpenStreetMap',
     maxZoom: 19,
   },
 };

@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { BarChart3, CloudSun, Radio, AlertTriangle } from 'lucide-react';
+import { BarChart3, CloudSun, Radio, AlertTriangle, Waves, Telescope } from 'lucide-react';
 import DashboardPage from './pages/DashboardPage.jsx';
 import AfricanCORSIntelligenceLabPage from './pages/AfricanCORSIntelligenceLabPage.jsx';
 import SpaceWeatherAfrica from './components/SpaceWeatherAfrica.jsx';
 import CorsAlertSystemPage from './pages/CorsAlertSystemPage.jsx';
+import IonosphericConditionsMonitor from './components/IonosphericConditionsMonitor.jsx';
+import ObservatoryHubPage from './pages/ObservatoryHubPage.jsx';
 
 const PAGES = [
-  { id: 'dashboard', label: 'Dashboard',        icon: BarChart3 },
-  { id: 'cors',      label: 'CORS Intelligence Lab', icon: Radio },
-  { id: 'weather',   label: 'Space Weather',    icon: CloudSun },
-  { id: 'alerts',    label: 'CORS Alert System',icon: AlertTriangle },
+  { id: 'dashboard',   label: 'Dashboard',               icon: BarChart3 },
+  { id: 'cors',        label: 'National CORS Services',   icon: Radio },
+  { id: 'alerts',      label: 'CORS Alert System',        icon: AlertTriangle },
+  { id: 'weather',     label: 'Space Weather',            icon: CloudSun },
+  { id: 'ionosphere',  label: 'Ionospheric Conditions',   icon: Waves },
+  { id: 'observatory', label: 'Astronomy',                icon: Telescope },
 ];
 
 export default function App() {
@@ -37,23 +41,29 @@ export default function App() {
             onClick={() => setPage(id)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700,
+              padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: '1rem', fontWeight: 700,
               background: page === id ? (
-                id === 'weather'  ? 'rgba(34,211,238,0.12)' :
-                id === 'dashboard'? 'rgba(167,139,250,0.12)' :
-                id === 'alerts'   ? 'rgba(239,68,68,0.12)' :
+                id === 'weather'     ? 'rgba(34,211,238,0.12)' :
+                id === 'ionosphere'  ? 'rgba(34,211,238,0.12)' :
+                id === 'dashboard'   ? 'rgba(167,139,250,0.12)' :
+                id === 'alerts'      ? 'rgba(239,68,68,0.12)' :
+                id === 'observatory' ? 'rgba(167,139,250,0.12)' :
                 'rgba(255,140,0,0.12)'
               ) : 'transparent',
               border: `1px solid ${page === id ? (
-                id === 'weather'  ? 'rgba(34,211,238,0.4)' :
-                id === 'dashboard'? 'rgba(167,139,250,0.4)' :
-                id === 'alerts'   ? 'rgba(239,68,68,0.4)' :
+                id === 'weather'     ? 'rgba(34,211,238,0.4)' :
+                id === 'ionosphere'  ? 'rgba(34,211,238,0.4)' :
+                id === 'dashboard'   ? 'rgba(167,139,250,0.4)' :
+                id === 'alerts'      ? 'rgba(239,68,68,0.4)' :
+                id === 'observatory' ? 'rgba(167,139,250,0.4)' :
                 'rgba(255,140,0,0.4)'
               ) : 'rgba(255,255,255,0.08)'}`,
               color: page === id ? (
-                id === 'weather'  ? '#22d3ee' :
-                id === 'dashboard'? '#a78bfa' :
-                id === 'alerts'   ? '#ef4444' :
+                id === 'weather'     ? '#22d3ee' :
+                id === 'ionosphere'  ? '#22d3ee' :
+                id === 'dashboard'   ? '#a78bfa' :
+                id === 'alerts'      ? '#ef4444' :
+                id === 'observatory' ? '#a78bfa' :
                 '#ff8c00'
               ) : '#94a3b8',
             }}
@@ -64,10 +74,12 @@ export default function App() {
         ))}
       </nav>
 
-      {page === 'dashboard' && <DashboardPage onNavigate={setPage} />}
-      {page === 'cors' && <AfricanCORSIntelligenceLabPage onNavigate={setPage} />}
-      {page === 'weather' && <SpaceWeatherAfrica />}
-      {page === 'alerts' && <CorsAlertSystemPage />}
+      {page === 'dashboard'   && <DashboardPage onNavigate={setPage} />}
+      {page === 'cors'        && <AfricanCORSIntelligenceLabPage onNavigate={setPage} />}
+      {page === 'weather'     && <SpaceWeatherAfrica />}
+      {page === 'ionosphere'  && <IonosphericConditionsMonitor />}
+      {page === 'alerts'      && <CorsAlertSystemPage />}
+      {page === 'observatory' && <ObservatoryHubPage />}
     </div>
   );
 }

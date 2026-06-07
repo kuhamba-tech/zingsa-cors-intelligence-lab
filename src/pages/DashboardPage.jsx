@@ -18,7 +18,7 @@ const dashboardLinks = [
   },
   {
     id: 'cors',
-    title: 'CORS Intelligence Lab',
+    title: 'National CORS Services',
     eyebrow: 'Station analysis',
     desc: 'Open the lab for regional station selection, integrity trends, GNSS quality, and network analysis.',
     icon: Radio,
@@ -43,10 +43,10 @@ export default function DashboardPage({ onNavigate }) {
             <Satellite size={16} />
             ZINGSA Space Science Operations
           </div>
-          <h1>CORS Intelligence Dashboard</h1>
+          <h1>National CORS Operations Dashboard</h1>
           <p>
-            A single operational entry point for the dashboard, CORS Intelligence Lab,
-            and Space Weather monitoring over Africa.
+            Monitoring Zimbabwe&apos;s continuously operating reference stations,
+            GNSS data services, and positioning infrastructure.
           </p>
         </div>
         <div className="dashboard-hero-status" aria-label="Dashboard status">

@@ -1,4 +1,10 @@
 const NOAA_KP_URL = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json';
+const NOAA_XRAY_1D_URL = 'https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json';
+const NOAA_PLASMA_1D_URL = 'https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json';
+const NOAA_MAG_1D_URL = 'https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json';
+const NOAA_ALERTS_URL = 'https://services.swpc.noaa.gov/products/alerts.json';
+const NASA_DONKI_BASE_URL = 'https://api.nasa.gov/DONKI';
+const NASA_API_KEY = import.meta.env?.VITE_NASA_API_KEY || 'DEMO_KEY';
 const TIMEOUT_MS = 15000;
 
 function kpLevel(kp) {
@@ -65,5 +71,130 @@ export function getDemoSpaceWeather() {
     history: [],
     timestamp: new Date().toISOString(),
     data_source: 'Calibrated Kp + regional EIA model (demo)',
+  };
+}
+
+function latestArrayRow(rows) {
+  return Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null;
+}
+
+function latestObjectRow(rows) {
+  return Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null;
+}
+
+function xrayClass(flux) {
+  const value = Number(flux) || 0;
+  if (value >= 1e-4) return `X${(value / 1e-4).toFixed(1)}`;
+  if (value >= 1e-5) return `M${(value / 1e-5).toFixed(1)}`;
+  if (value >= 1e-6) return `C${(value / 1e-6).toFixed(1)}`;
+  if (value >= 1e-7) return `B${(value / 1e-7).toFixed(1)}`;
+  return `A${Math.max(value / 1e-8, 0.1).toFixed(1)}`;
+}
+
+function activityLevel(flareClass, alertCount) {
+  const letter = flareClass?.[0] || 'A';
+  if (letter === 'X') return { label: 'Extreme', color: '#a855f7', gnss: 'Severe radio/GNSS watch' };
+  if (letter === 'M') return { label: 'High', color: '#f97316', gnss: 'HF radio and GNSS watch' };
+  if (letter === 'C' || alertCount > 0) return { label: 'Moderate', color: '#eab308', gnss: 'Minor GNSS impact possible' };
+  return { label: 'Low', color: '#22c55e', gnss: 'Minimal impact' };
+}
+
+function parseTableProduct(rows) {
+  if (!Array.isArray(rows) || rows.length < 2) return { header: [], data: [] };
+  const header = rows[0];
+  return { header, data: rows.slice(1) };
+}
+
+function valueFromTable(row, header, key) {
+  const index = header.findIndex(h => String(h).toLowerCase().includes(key));
+  return index >= 0 ? row?.[index] : undefined;
+}
+
+function isoDate(daysAgo = 0) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - daysAgo);
+  return date.toISOString().slice(0, 10);
+}
+
+function donkiUrl(product) {
+  const params = new URLSearchParams({
+    startDate: isoDate(6),
+    endDate: isoDate(0),
+    api_key: NASA_API_KEY,
+  });
+  return `${NASA_DONKI_BASE_URL}/${product}?${params.toString()}`;
+}
+
+export async function fetchSolarActivity() {
+  const [xrays, plasmaRows, magRows, alerts, flares, cmes, storms] = await Promise.all([
+    fetchJson(NOAA_XRAY_1D_URL),
+    fetchJson(NOAA_PLASMA_1D_URL),
+    fetchJson(NOAA_MAG_1D_URL),
+    fetchJson(NOAA_ALERTS_URL),
+    fetchJson(donkiUrl('FLR')).catch(() => []),
+    fetchJson(donkiUrl('CME')).catch(() => []),
+    fetchJson(donkiUrl('GST')).catch(() => []),
+  ]);
+
+  const xrayLatest = latestObjectRow(xrays);
+  const flux = Number(xrayLatest?.flux) || 0;
+  const flareClass = xrayClass(flux);
+  const xraySeries = Array.isArray(xrays)
+    ? xrays.filter(row => row?.energy === '0.1-0.8nm').slice(-36).map(row => Number(row.flux) || 0)
+    : [];
+
+  const plasma = parseTableProduct(plasmaRows);
+  const plasmaLatest = latestArrayRow(plasma.data);
+  const speed = Number(valueFromTable(plasmaLatest, plasma.header, 'speed')) || 0;
+  const density = Number(valueFromTable(plasmaLatest, plasma.header, 'density')) || 0;
+  const temperature = Number(valueFromTable(plasmaLatest, plasma.header, 'temperature')) || 0;
+
+  const mag = parseTableProduct(magRows);
+  const magLatest = latestArrayRow(mag.data);
+  const bt = Number(valueFromTable(magLatest, mag.header, 'bt')) || 0;
+  const bz = Number(valueFromTable(magLatest, mag.header, 'bz')) || 0;
+
+  const alertList = Array.isArray(alerts) ? alerts.slice(-5).reverse() : [];
+  const level = activityLevel(flareClass, alertList.length);
+
+  return {
+    mode: 'live',
+    updated: xrayLatest?.time_tag || new Date().toISOString(),
+    flareClass,
+    flux,
+    xraySeries,
+    solarWind: { speed, density, temperature, bt, bz },
+    alerts: alertList,
+    donki: {
+      flares: Array.isArray(flares) ? flares : [],
+      cmes: Array.isArray(cmes) ? cmes : [],
+      storms: Array.isArray(storms) ? storms : [],
+      dateRange: { start: isoDate(6), end: isoDate(0) },
+    },
+    level,
+  };
+}
+
+export function getDemoSolarActivity() {
+  const hour = new Date().getUTCHours();
+  const base = 1.2e-6 + Math.abs(Math.sin(hour * 0.7)) * 2.8e-6;
+  const xraySeries = Array.from({ length: 36 }, (_, i) => base * (0.75 + Math.abs(Math.sin((hour + i) * 0.34)) * 0.55));
+  const flareClass = xrayClass(Math.max(...xraySeries));
+  const level = activityLevel(flareClass, 1);
+  return {
+    mode: 'demo',
+    updated: new Date().toISOString(),
+    flareClass,
+    flux: Math.max(...xraySeries),
+    xraySeries,
+    solarWind: { speed: 486, density: 7.4, temperature: 112000, bt: 8.2, bz: -2.4 },
+    alerts: [{ product_id: 'DEMO', message: 'No severe NOAA SWPC alert active. Solar activity under routine watch.' }],
+    donki: {
+      flares: [{ flrID: 'DEMO-FLR', classType: flareClass, beginTime: new Date().toISOString(), sourceLocation: 'N12W30' }],
+      cmes: [{ activityID: 'DEMO-CME', startTime: new Date().toISOString(), note: 'No Earth-directed CME in demo model.' }],
+      storms: [],
+      dateRange: { start: isoDate(6), end: isoDate(0) },
+    },
+    level,
   };
 }

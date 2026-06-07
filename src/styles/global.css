@@ -1,5 +1,9 @@
 *, *::before, *::after { box-sizing: border-box; }
 
+html {
+  font-size: 18px;
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;
@@ -61,7 +65,7 @@ button, select, input { font-family: inherit; }
   margin: 0;
   max-width: 650px;
   color: #a7b3c9;
-  font-size: 1rem;
+  font-size: clamp(1.05rem, 1.55vw, 1.35rem);
   line-height: 1.7;
 }
 

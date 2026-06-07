@@ -16,9 +16,22 @@ const MAP_CITIES = [
   [15.5007, 32.5599, 'Khartoum', 'north'],
   [-17.8252, 31.0335, 'Harare', 'southern'],
   [-22.5609, 17.0658, 'Windhoek', 'southern'],
+  [4.711, -74.0721, 'Bogota', 'world'],
+  [-0.1807, -78.4678, 'Quito', 'world'],
+  [-12.0464, -77.0428, 'Lima', 'world'],
+  [-15.7939, -47.8828, 'Brasilia', 'world'],
+  [1.3521, 103.8198, 'Singapore', 'world'],
+  [-6.2088, 106.8456, 'Jakarta', 'world'],
+  [13.7563, 100.5018, 'Bangkok', 'world'],
+  [14.5995, 120.9842, 'Manila', 'world'],
+  [19.076, 72.8777, 'Mumbai', 'world'],
+  [9.082, 7.491, 'Abuja', 'world'],
+  [1.2921, 36.8219, 'Nairobi Belt', 'world'],
+  [21.3069, -157.8583, 'Honolulu', 'world'],
 ];
 
 const REGION_VIEW = {
+  world: { center: [15, 10], zoom: 2 },
   pan: { center: [3, 20], zoom: 3 },
   equatorial: { center: [0, 18], zoom: 4 },
   east: { center: [2, 38], zoom: 4 },
@@ -56,7 +69,7 @@ function MapResizeFix() {
 export default function AfricaIonosphereMap({ kp, status, regionId, regionSummary }) {
   const [tileMode, setTileMode] = useState('hybrid');
   const cities = useMemo(
-    () => (regionId === 'pan' ? MAP_CITIES : MAP_CITIES.filter(([, , , r]) => r === regionId)),
+    () => (regionId === 'world' ? MAP_CITIES : regionId === 'pan' ? MAP_CITIES.filter(([, , , r]) => r !== 'world') : MAP_CITIES.filter(([, , , r]) => r === regionId)),
     [regionId],
   );
   const activity = activityLabel(kp);
@@ -64,12 +77,29 @@ export default function AfricaIonosphereMap({ kp, status, regionId, regionSummar
   const eiaOpacity = Math.min(0.22 + kp * 0.05, 0.5);
   const view = REGION_VIEW[regionId] || REGION_VIEW.pan;
   const tileProps = africaMapTileLayerProps(tileMode);
+  const isWorld = regionId === 'world';
+  const eiaBounds = isWorld ? [[-18, -180], [18, 180]] : [[-18, -18], [18, 52]];
+  const eiaTooltip = isWorld
+    ? 'Global EIA belt - equatorial GNSS scintillation risk zone'
+    : 'EIA zone - highest GPS error belt across equatorial Africa';
+  const mapFacts = isWorld
+    ? [
+      ['#22d3ee', 'Global EIA belt', 'Shown from 18S to 18N'],
+      ['#fbbf24', 'EIA crest zones', 'Approx. +/-15 degrees magnetic latitude'],
+      [accent, 'Planetary Kp', `Kp ${kp.toFixed(1)} - ${status.label}`],
+      ['#a78bfa', 'Watch areas', 'Equatorial and auroral regions'],
+    ]
+    : [
+      ['#22d3ee', 'EIA belt overlay', 'Cyan band on the map'],
+      ['#fbbf24', 'Cities monitored', regionId === 'world' ? `${cities.length} belt hubs` : regionId === 'pan' ? '12 hubs' : 'This region'],
+      [accent, 'Storm level', `Kp ${kp.toFixed(1)} - ${status.label}`],
+    ];
 
   return (
     <div className="sw-africa-map-card" style={{ background: 'linear-gradient(180deg,rgba(8,14,32,0.95),rgba(4,8,20,0.98))', border: '1px solid rgba(34,211,238,0.25)', borderRadius: 16, padding: 18, width: '100%', minWidth: 0 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
         <div style={{ flex: '1 1 200px' }}>
-          <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#22d3ee' }}>Africa ionosphere map</div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#22d3ee' }}>{regionId === 'world' ? 'Global ionosphere map' : 'Africa ionosphere map'}</div>
           <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: '#94a3b8', lineHeight: 1.5 }}>{regionSummary}</p>
         </div>
         <div style={{ flexShrink: 0, background: 'rgba(8,12,36,0.95)', border: `1px solid ${accent}55`, borderRadius: 10, padding: '8px 14px', textAlign: 'center', minWidth: 88 }}>
@@ -80,14 +110,22 @@ export default function AfricaIonosphereMap({ kp, status, regionId, regionSummar
       </div>
 
       <div className="sw-ionosphere-map-shell">
-        <MapContainer key={tileMode} center={view.center} zoom={view.zoom} minZoom={2} maxZoom={12} maxBounds={AFRICA_MAP_BOUNDS} maxBoundsViscosity={0.85} scrollWheelZoom style={{ height: '100%', width: '100%' }} attributionControl={false}>
+        <MapContainer key={tileMode} center={view.center} zoom={view.zoom} minZoom={2} maxZoom={12} maxBounds={regionId === 'world' ? undefined : AFRICA_MAP_BOUNDS} maxBoundsViscosity={0.85} scrollWheelZoom style={{ height: '100%', width: '100%' }} attributionControl={false}>
           <TileLayer key={tileMode} {...tileProps} />
           <RegionFocus regionId={regionId} />
           <MapResizeFix />
-          <Rectangle bounds={[[-18, -18], [18, 52]]} pathOptions={{ color: '#22d3ee', weight: 2, fillColor: '#22d3ee', fillOpacity: eiaOpacity, dashArray: '6 4' }}>
+          <Rectangle bounds={eiaBounds} pathOptions={{ color: '#22d3ee', weight: 2, fillColor: '#22d3ee', fillOpacity: eiaOpacity, dashArray: '6 4' }}>
             <Tooltip direction="top" className="sw-map-tooltip">EIA zone — highest GPS error belt across equatorial Africa</Tooltip>
           </Rectangle>
-          <Polyline positions={[[0, -20], [0, 55]]} pathOptions={{ color: '#22d3ee', weight: 2, opacity: 0.85 }} />
+          <Polyline positions={[[0, isWorld ? -180 : -20], [0, isWorld ? 180 : 55]]} pathOptions={{ color: '#22d3ee', weight: 2, opacity: 0.85 }} />
+          {isWorld && (
+            <>
+              <Polyline positions={[[15, -180], [15, 180]]} pathOptions={{ color: '#fbbf24', weight: 1.5, opacity: 0.78, dashArray: '8 8' }} />
+              <Polyline positions={[[-15, -180], [-15, 180]]} pathOptions={{ color: '#fbbf24', weight: 1.5, opacity: 0.78, dashArray: '8 8' }} />
+              <Rectangle bounds={[[55, -180], [75, 180]]} pathOptions={{ color: '#a78bfa', weight: 1, fillColor: '#a78bfa', fillOpacity: kp >= 4 ? 0.12 : 0.04, dashArray: '10 8' }} />
+              <Rectangle bounds={[[-75, -180], [-55, 180]]} pathOptions={{ color: '#a78bfa', weight: 1, fillColor: '#a78bfa', fillOpacity: kp >= 4 ? 0.12 : 0.04, dashArray: '10 8' }} />
+            </>
+          )}
           {kp >= 4 && (
             <Rectangle bounds={[[-12, 5], [12, 42]]} pathOptions={{ color: accent, weight: 1.5, fillColor: accent, fillOpacity: 0.08, dashArray: '8 6' }} />
           )}

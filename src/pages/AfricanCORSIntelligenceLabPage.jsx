@@ -430,7 +430,7 @@ export default function AfricanCORSIntelligenceLabPage({ onNavigate }) {
           <Radio size={22} color="#ff8c00" />
           <div>
             <div className="cil-header-title">ZINGSA Space Science</div>
-            <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 2 }}>Zimbabwe National Geospatial &amp; Space Agency · Ionospheric Perturbations · CORS Network</div>
+            <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: 2 }}>Zimbabwe National Geospatial Agency-CORS Services</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -451,7 +451,7 @@ export default function AfricanCORSIntelligenceLabPage({ onNavigate }) {
       </header>
 
       <div className="cil-breadcrumb">
-        Select region or application <span>›</span> See analysis <span>›</span> View satellite track and ionospheric perturbations (IP)
+        Select region or application <span>›</span> See analysis
       </div>
 
       {liveError && (

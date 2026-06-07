@@ -1,6 +1,7 @@
 /** African-focused space weather — regions, monitoring centres, satellites */
 
 export const AFRICAN_REGIONS = [
+  { id: 'world', label: 'Whole World', flag: 'Global', summary: 'Global geomagnetic and ionospheric conditions from NOAA SWPC.', eiaNote: 'Global space weather affects GNSS, satellites, aviation, HF radio, power grids, and Earth observation services across all regions.' },
   { id: 'pan', label: 'All Africa', flag: '🌍', summary: 'Continent-wide geomagnetic and ionospheric conditions.', eiaNote: 'The Equatorial Ionization Anomaly (EIA) twin crests sit over Central and East Africa — the highest GNSS error belt on Earth.' },
   { id: 'equatorial', label: 'Equatorial Belt', flag: '〰️', summary: 'DRC · Uganda · Kenya · Nigeria · Ghana · Cameroon — strongest scintillation risk.', eiaNote: 'EIA crests cause GPS errors of 5–15 m without correction. Precision farming and drone surveys most affected.' },
   { id: 'east', label: 'East Africa', flag: '🌅', summary: 'Kenya · Ethiopia · Tanzania · Rwanda · Somalia corridor.', eiaNote: 'HF blackouts on trans-equatorial paths to Europe. Rift Valley CORS networks monitor TEC daily.' },

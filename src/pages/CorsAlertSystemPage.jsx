@@ -4,14 +4,15 @@ import 'leaflet/dist/leaflet.css';
 import {
   Wifi, Radio, AlertTriangle, Activity, Clock,
   Bell, Settings, BarChart3, FileText, Layers,
-  ChevronRight, Satellite, Search, Download,
+  ChevronRight, Satellite, Search, Download, Database,
   RefreshCw, CheckCircle, XCircle, Filter, Eye,
   ToggleLeft, ToggleRight, Save, Mail, Phone, MessageCircle,
 } from 'lucide-react';
 import { ZIMBABWE_CORS_STATIONS } from '../data/zimbabweCorsStations.js';
+import { AFRICA_TILE_LAYERS, africaMapTileLayerProps } from '../components/africaMapConfig.js';
 import '../styles/cors-alert-system.css';
 
-/* ─────────────────── shared mock data ─────────────────────── */
+/* Shared mock data */
 const STATUS_OVERRIDE = {
   CENT: 'critical', HACY: 'critical',
   HARA: 'warning',  MUTA: 'warning', BULA: 'warning',
@@ -22,6 +23,8 @@ const MAP_STATIONS = ZIMBABWE_CORS_STATIONS.map(st => ({
   ...st,
   status: STATUS_OVERRIDE[st.id] ?? (st.status === 'degraded' ? 'warning' : st.status),
 }));
+const ZIMBABWE_MAP_CENTER = [-19.0, 29.6];
+const ZIMBABWE_MAP_BOUNDS = [[-24.2, 22.8], [-13.8, 36.2]];
 
 const ACTIVE_ALERTS = [
   { id: 1, level: 'CRITICAL', station: 'CENT', problem: 'Data stream offline',      time: '09:35', duration: '21 min',  status: 'active',   action: 'investigate' },
@@ -53,9 +56,11 @@ const HEALTH_TOTAL = HEALTH.reduce((s, h) => s + h.value, 0);
 const NAV_TABS = [
   { id: 'dashboard', label: 'Dashboard',  icon: BarChart3 },
   { id: 'stations',  label: 'Stations',   icon: Radio },
+  { id: 'monitoring', label: 'Monitoring', icon: Activity },
   { id: 'alerts',    label: 'Alerts',     icon: AlertTriangle },
+  { id: 'analysis',  label: 'Analysis',   icon: Eye },
   { id: 'reports',   label: 'Reports',    icon: FileText },
-  { id: 'analytics', label: 'Analytics',  icon: Activity },
+  { id: 'data-centre', label: 'Data Centre', icon: Database },
   { id: 'logs',      label: 'Logs',       icon: Layers },
   { id: 'settings',  label: 'Settings',   icon: Settings },
 ];
@@ -85,7 +90,7 @@ const STATION_TABLE_DATA = MAP_STATIONS.map((st, i) => ({
     : 97 + (i % 3),
 }));
 
-/* ─────────────────── chart helpers ────────────────────────── */
+/* Chart helpers */
 function genSeries(base, amp, n = 25) {
   return Array.from({ length: n }, (_, i) =>
     Math.round((base + Math.sin(i * 0.6) * amp + (Math.random() - 0.5) * amp * 0.5) * 10) / 10
@@ -104,10 +109,68 @@ const ALERT_BARS = [
 /* 7-day uptime trend */
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const UPTIME_7D = DAYS.map(d => ({ day: d, value: 96 + Math.random() * 3.5 }));
+const MONITORING_TIME_WINDOWS = {
+  week: {
+    label: '7 days',
+    uptimeTitle: 'Network Uptime - Last 7 Days',
+    trendTitle: '7-Day GNSS Signal Quality Trend',
+    kpiSub: 'Last 7 days',
+    xLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    uptime: UPTIME_7D.map(d => ({ label: d.day, value: Math.round(d.value * 10) / 10 })),
+    signalTrend: [82, 84, 83, 81, 85, 84, 86],
+    accuracyTrend: [2.4, 2.2, 2.3, 2.5, 2.1, 2.2, 2.0],
+  },
+  month: {
+    label: 'Month',
+    uptimeTitle: 'Network Uptime - This Month',
+    trendTitle: 'Monthly GNSS Signal Quality Trend',
+    kpiSub: 'This month',
+    xLabels: ['W1', 'W2', 'W3', 'W4', 'W5'],
+    uptime: [
+      { label: 'W1', value: 98.2 },
+      { label: 'W2', value: 97.9 },
+      { label: 'W3', value: 99.1 },
+      { label: 'W4', value: 98.6 },
+      { label: 'W5', value: 98.9 },
+    ],
+    signalTrend: [80, 82, 84, 83, 85],
+    accuracyTrend: [2.7, 2.5, 2.3, 2.4, 2.2],
+  },
+  year: {
+    label: 'Year',
+    uptimeTitle: 'Network Uptime - 2026',
+    trendTitle: 'Yearly GNSS Signal Quality Trend',
+    kpiSub: '2026 average',
+    xLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    uptime: [
+      { label: 'Jan', value: 98.5 },
+      { label: 'Feb', value: 98.1 },
+      { label: 'Mar', value: 97.8 },
+      { label: 'Apr', value: 98.7 },
+      { label: 'May', value: 98.3 },
+      { label: 'Jun', value: 99.0 },
+      { label: 'Jul', value: 98.8 },
+      { label: 'Aug', value: 99.1 },
+      { label: 'Sep', value: 98.6 },
+      { label: 'Oct', value: 98.4 },
+      { label: 'Nov', value: 98.9 },
+      { label: 'Dec', value: 99.2 },
+    ],
+    signalTrend: [78, 79, 81, 80, 82, 83, 82, 84, 85, 84, 86, 87],
+    accuracyTrend: [3.0, 2.9, 2.7, 2.8, 2.5, 2.4, 2.5, 2.3, 2.2, 2.3, 2.1, 2.0],
+  },
+};
+const AVAILABILITY_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const GNSS_AVAILABILITY = [
+  { station: 'HRE1', name: 'Harare', availability: 99.3, monthly: [99, 100, 99, 99, 100, 99, 99, 100, 99, 99, 100, 99] },
+  { station: 'BYO1', name: 'Bulawayo', availability: 97.8, monthly: [98, 98, 96, 98, 99, 98, 98, 97, 98, 98, 99, 98] },
+  { station: 'VFA1', name: 'Victoria Falls', availability: 99.1, monthly: [99, 99, 100, 99, 99, 99, 98, 99, 100, 99, 99, 99] },
+  { station: 'GWE1', name: 'Gweru', availability: 98.4, monthly: [99, 98, 98, 99, 96, 99, 98, 99, 99, 98, 99, 99] },
+];
 
 /* Logs */
 const LOG_ENTRIES = [
-  { id:1,  ts:'09:56:01', level:'INFO',    src:'SYSTEM', msg:'Heartbeat check passed — all polling threads active.' },
+  { id:1,  ts:'09:56:01', level:'INFO',    src:'SYSTEM', msg:'Heartbeat check passed - all polling threads active.' },
   { id:2,  ts:'09:55:47', level:'ERROR',   src:'CENT',   msg:'TCP socket closed unexpectedly. Reconnect attempt 3/5.' },
   { id:3,  ts:'09:54:12', level:'WARNING', src:'MUTA',   msg:'C/N0 dropped below 38 dB-Hz on L2 frequency.' },
   { id:4,  ts:'09:53:08', level:'INFO',    src:'BULA',   msg:'RINEX 3.04 file BUL_20250520_0950.obs queued for upload.' },
@@ -132,14 +195,14 @@ const REPORT_TYPES = [
 ];
 
 const RECENT_REPORTS = [
-  { id:1, name:'Network Health — 19 May 2025',  type:'health',  size:'1.2 MB', date:'19 May 09:00', status:'ready' },
-  { id:2, name:'RINEX Availability — 19 May',   type:'rinex',   size:'840 KB', date:'19 May 00:05', status:'ready' },
-  { id:3, name:'GNSS Signal Quality — Week 20', type:'signal',  size:'3.4 MB', date:'18 May 23:59', status:'ready' },
-  { id:4, name:'Alert History — May 2025',       type:'alerts',  size:'560 KB', date:'18 May 08:00', status:'ready' },
-  { id:5, name:'Station Uptime — April 2025',    type:'uptime',  size:'220 KB', date:'01 May 00:01', status:'ready' },
+  { id:1, name:'Network Health - 19 May 2025',  type:'health',  size:'1.2 MB', date:'19 May 09:00', status:'ready' },
+  { id:2, name:'RINEX Availability - 19 May',   type:'rinex',   size:'840 KB', date:'19 May 00:05', status:'ready' },
+  { id:3, name:'GNSS Signal Quality - Week 20', type:'signal',  size:'3.4 MB', date:'18 May 23:59', status:'ready' },
+  { id:4, name:'Alert History - May 2025',       type:'alerts',  size:'560 KB', date:'18 May 08:00', status:'ready' },
+  { id:5, name:'Station Uptime - April 2025',    type:'uptime',  size:'220 KB', date:'01 May 00:01', status:'ready' },
 ];
 
-/* ─────────────────── shared chart components ───────────────── */
+/* Shared chart components */
 function DonutChart({ segments, total, size = 130, strokeWidth = 22 }) {
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
@@ -229,7 +292,7 @@ function StatusBadge({ status }) {
   return <span className={`cas-status-badge ${cls}`}>{label}</span>;
 }
 
-/* ─────────────────── TAB: STATIONS ────────────────────────── */
+/* TAB: STATIONS */
 function StationsView() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch]  = useState('');
@@ -285,7 +348,7 @@ function StationsView() {
           <Search size={13} />
           <input
             type="text"
-            placeholder="Search by ID or name…"
+            placeholder="Search by ID or name..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -313,7 +376,7 @@ function StationsView() {
               <tr key={st.id}>
                 <td><span className="cas-station-id">{st.id}</span></td>
                 <td className="cas-text-muted">{st.name}</td>
-                <td className="cas-text-mono">{st.lat.toFixed(3)}°, {st.lon.toFixed(3)}°</td>
+                <td className="cas-text-mono">{st.lat.toFixed(3)} deg, {st.lon.toFixed(3)} deg</td>
                 <td><StatusBadge status={st.status} /></td>
                 <td className="cas-text-mono">{st.lastData}</td>
                 <td>
@@ -326,12 +389,12 @@ function StationsView() {
                     <span>{st.gnssQuality}%</span>
                   </div>
                 </td>
-                <td className="cas-text-center">{st.satellites || '—'}</td>
-                <td className="cas-text-mono">{st.latency ? `${st.latency} ms` : '—'}</td>
-                <td className="cas-text-center">{st.rinexToday > 0 ? `${st.rinexToday}/24` : '—'}</td>
+                <td className="cas-text-center">{st.satellites || '-'}</td>
+                <td className="cas-text-mono">{st.latency ? `${st.latency} ms` : '-'}</td>
+                <td className="cas-text-center">{st.rinexToday > 0 ? `${st.rinexToday}/24` : '-'}</td>
                 <td>
                   <span style={{ color: st.uptime >= 95 ? '#22c55e' : st.uptime >= 80 ? '#f59e0b' : '#ef4444', fontWeight: 700, fontSize: '0.72rem' }}>
-                    {st.uptime > 0 ? `${st.uptime}%` : '—'}
+                    {st.uptime > 0 ? `${st.uptime}%` : '-'}
                   </span>
                 </td>
               </tr>
@@ -346,7 +409,7 @@ function StationsView() {
   );
 }
 
-/* ─────────────────── TAB: ALERTS ──────────────────────────── */
+/* TAB: ALERTS */
 function AlertsView() {
   const [filter, setFilter] = useState('all');
 
@@ -434,7 +497,7 @@ function AlertsView() {
                 <td className="cas-text-mono">{a.duration}</td>
                 <td>
                   {a.status === 'active'
-                    ? <span className="cas-status-active">● Active</span>
+                    ? <span className="cas-status-active">Active</span>
                     : <span className="cas-status-resolved"><CheckCircle size={11} /> Resolved</span>}
                 </td>
                 <td>
@@ -453,7 +516,106 @@ function AlertsView() {
   );
 }
 
-/* ─────────────────── TAB: REPORTS ─────────────────────────── */
+/* TAB: ANALYSIS */
+function AnalysisView() {
+  const activeAlerts = ACTIVE_ALERTS.filter(a => a.status === 'active');
+  const criticalAlerts = activeAlerts.filter(a => a.level === 'CRITICAL').length;
+  const warningAlerts = activeAlerts.filter(a => a.level === 'WARNING').length;
+  const onlineCount = MAP_STATIONS.filter(s => s.status === 'online').length;
+  const networkHealth = Math.round((onlineCount / MAP_STATIONS.length) * 100);
+  const avgSignal = Math.round(STATION_TABLE_DATA.reduce((sum, st) => sum + st.gnssQuality, 0) / STATION_TABLE_DATA.length);
+  const avgUptime = (STATION_TABLE_DATA.reduce((sum, st) => sum + st.uptime, 0) / STATION_TABLE_DATA.length).toFixed(1);
+
+  const insightCards = [
+    {
+      tone: 'cyan',
+      title: 'What The Data Shows',
+      icon: 'DATA',
+      text: `The ZimCORS network is operating at ${networkHealth}% health with ${onlineCount}/${MAP_STATIONS.length} stations online. Current alert load includes ${criticalAlerts} critical and ${warningAlerts} warning events.`,
+    },
+    {
+      tone: 'orange',
+      title: 'Why It Matters',
+      icon: 'WHY',
+      text: 'Stable CORS telemetry protects centimetre-level positioning for survey work, construction control, drone mapping, disaster response, and national geospatial services.',
+    },
+    {
+      tone: 'red',
+      title: 'Risks Detected',
+      icon: 'RISK',
+      text: 'Offline streams, low signal quality, and high latency can reduce RTK reliability. Stations with persistent gaps should be investigated before precision field campaigns.',
+    },
+    {
+      tone: 'green',
+      title: 'Recommended Action',
+      icon: 'ACTION',
+      text: 'Prioritize critical stations, verify receiver power and internet links, confirm NTRIP mountpoints, and notify field teams through enabled alert channels.',
+    },
+    {
+      tone: 'violet',
+      title: 'How CORS/GNSS Contributes',
+      icon: 'GNSS',
+      text: 'CORS station telemetry confirms reference-frame stability, correction availability, RINEX completeness, and network readiness for downstream applications.',
+    },
+  ];
+
+  const recommendations = [
+    'Dispatch technical checks for critical stations with offline streams or missing receiver telemetry.',
+    'Publish current NTRIP and station-health status to surveyors, engineers, and emergency-response teams.',
+    'Use WhatsApp, email, and webhook alerts for critical outages so operations teams receive rapid notifications.',
+    'Archive daily RINEX files and station metadata for deformation monitoring, quality audits, and long-term analysis.',
+  ];
+
+  return (
+    <div>
+      <div className="cas-tab-header">
+        <div>
+          <h2 className="cas-tab-title">Analysis</h2>
+          <p className="cas-tab-subtitle">Operational interpretation of CORS station health, alerts and GNSS readiness</p>
+        </div>
+      </div>
+
+      <section className="cas-analysis-panel">
+        <div className="cas-analysis-title">Analysis Explanation - Zimbabwe CORS Alert Network</div>
+        <div className="cas-analysis-grid">
+          {insightCards.map(card => (
+            <article key={card.title} className={`cas-analysis-card ${card.tone}`}>
+              <h3>{card.icon} {card.title}</h3>
+              <p>{card.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="cas-analysis-panel">
+        <div className="cas-analysis-title">Policy &amp; Action Recommendations</div>
+        <div className="cas-recommendation-grid">
+          {recommendations.map((text, index) => (
+            <article key={text} className="cas-recommendation-card">
+              <span>{index + 1}</span>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="cas-analysis-metrics">
+        {[
+          ['Network health', `${networkHealth}%`],
+          ['Average signal quality', `${avgSignal}%`],
+          ['Average uptime', `${avgUptime}%`],
+          ['Active alerts', activeAlerts.length],
+        ].map(([label, value]) => (
+          <div key={label} className="cas-analysis-metric">
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 function ReportsView() {
   const [generating, setGenerating] = useState(null);
 
@@ -487,7 +649,7 @@ function ReportsView() {
               <button type="button" className="cas-report-gen-btn"
                 onClick={() => handleGenerate(r.id)}
                 style={{ borderColor: r.color, color: r.color }}>
-                {generating === r.id ? <><RefreshCw size={12} /> Generating…</> : 'Generate'}
+                {generating === r.id ? <><RefreshCw size={12} /> Generating...</> : 'Generate'}
               </button>
             </div>
           );
@@ -521,34 +683,58 @@ function ReportsView() {
   );
 }
 
-/* ─────────────────── TAB: ANALYTICS ───────────────────────── */
-function AnalyticsView() {
-  const uptimeWeekBars = UPTIME_7D.map(d => ({
-    label: d.day,
-    value: Math.round(d.value * 10) / 10,
+/* TAB: MONITORING / DATA CENTRE */
+function AnalyticsView({
+  title = 'Monitoring',
+  subtitle = 'Network performance metrics and trends',
+}) {
+  const [timeWindow, setTimeWindow] = useState('week');
+  const activeWindow = MONITORING_TIME_WINDOWS[timeWindow];
+  const avgUptime = (
+    activeWindow.uptime.reduce((sum, item) => sum + item.value, 0) / activeWindow.uptime.length
+  ).toFixed(1);
+  const avgSignal = (
+    activeWindow.signalTrend.reduce((sum, item) => sum + item, 0) / activeWindow.signalTrend.length
+  ).toFixed(1);
+  const avgAccuracy = (
+    activeWindow.accuracyTrend.reduce((sum, item) => sum + item, 0) / activeWindow.accuracyTrend.length
+  ).toFixed(1);
+
+  const uptimeBars = activeWindow.uptime.map(d => ({
+    label: d.label,
+    value: d.value,
     color: d.value >= 99 ? '#22c55e' : d.value >= 97 ? '#f59e0b' : '#ef4444',
   }));
 
+  const rangeSignalLift = { week: 0, month: 2, year: 4 }[timeWindow];
   const signalByStation = STATION_TABLE_DATA.slice(0, 8).map(st => ({
     label: st.id,
-    value: st.gnssQuality,
-    color: st.gnssQuality > 80 ? '#22c55e' : st.gnssQuality > 60 ? '#f59e0b' : '#ef4444',
+    value: Math.min(99, st.gnssQuality + rangeSignalLift),
+    color: st.gnssQuality + rangeSignalLift > 80 ? '#22c55e' : st.gnssQuality + rangeSignalLift > 60 ? '#f59e0b' : '#ef4444',
   }));
 
   const KPI = [
-    { label: 'Avg Network Uptime', value: '99.2%',  sub: 'Last 7 days',  color: '#22c55e' },
-    { label: 'Avg Signal Quality', value: '78.4%',  sub: 'All stations', color: '#3b82f6' },
-    { label: 'RINEX Completeness', value: '92.0%',  sub: 'Today',        color: '#a78bfa' },
-    { label: 'Mean Latency',       value: '124 ms', sub: 'Network avg',  color: '#22d3ee' },
+    { label: 'Avg Network Uptime', value: `${avgUptime}%`,  sub: activeWindow.kpiSub,  color: '#22c55e' },
+    { label: 'Avg Signal Quality', value: `${avgSignal}%`,  sub: activeWindow.kpiSub, color: '#3b82f6' },
+    { label: 'RINEX Completeness', value: timeWindow === 'year' ? '96.4%' : timeWindow === 'month' ? '94.8%' : '92.0%',  sub: activeWindow.kpiSub, color: '#a78bfa' },
+    { label: 'Mean Accuracy',      value: `${avgAccuracy} cm`, sub: activeWindow.kpiSub,  color: '#22d3ee' },
   ];
 
   return (
     <div>
       <div className="cas-tab-header">
         <div>
-          <h2 className="cas-tab-title">Analytics</h2>
-          <p className="cas-tab-subtitle">Network performance metrics and trends</p>
+          <h2 className="cas-tab-title">{title}</h2>
+          <p className="cas-tab-subtitle">{subtitle}</p>
         </div>
+        <label className="cas-time-window-control">
+          <span>Time window</span>
+          <select value={timeWindow} onChange={event => setTimeWindow(event.target.value)}>
+            {Object.entries(MONITORING_TIME_WINDOWS).map(([key, option]) => (
+              <option key={key} value={key}>{option.label}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="cas-kpi-row">
@@ -564,11 +750,11 @@ function AnalyticsView() {
       <div className="cas-analytics-grid">
         <div className="cas-card">
           <div className="cas-card-header">
-            <span className="cas-card-title">Network Uptime — Last 7 Days</span>
+            <span className="cas-card-title">{activeWindow.uptimeTitle}</span>
           </div>
           <div className="cas-barchart-body" style={{ height: 180 }}>
             <div className="cas-bar-svg-wrap">
-              <BarChart bars={uptimeWeekBars} width={500} height={155} />
+              <BarChart bars={uptimeBars} width={500} height={155} />
             </div>
           </div>
         </div>
@@ -586,18 +772,18 @@ function AnalyticsView() {
 
         <div className="cas-card" style={{ gridColumn: '1 / -1' }}>
           <div className="cas-card-header">
-            <span className="cas-card-title">24-Hour GNSS Signal Quality Trend</span>
+            <span className="cas-card-title">{activeWindow.trendTitle}</span>
           </div>
           <div className="cas-linechart-body" style={{ height: 180 }}>
             <div className="cas-chart-svg-wrap">
               <MultiLineChart width={900} height={120}
                 series={[
-                  { data: SIGNAL_DATA,   color: '#22c55e' },
-                  { data: ACCURACY_DATA, color: '#3b82f6' },
+                  { data: activeWindow.signalTrend,   color: '#22c55e' },
+                  { data: activeWindow.accuracyTrend, color: '#3b82f6' },
                 ]} />
             </div>
             <div className="cas-x-labels">
-              {['00:00','04:00','08:00','12:00','16:00','20:00','24:00'].map(t => (
+              {activeWindow.xLabels.map(t => (
                 <span key={t}>{t}</span>
               ))}
             </div>
@@ -616,7 +802,7 @@ function AnalyticsView() {
   );
 }
 
-/* ─────────────────── TAB: LOGS ────────────────────────────── */
+/* TAB: LOGS */
 function LogsView() {
   const [filter, setFilter] = useState('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -690,7 +876,7 @@ function LogsView() {
   );
 }
 
-/* ─────────────────── TAB: SETTINGS ────────────────────────── */
+/* TAB: SETTINGS */
 function SettingsView() {
   const [thresholds, setThresholds] = useState({
     latencyWarn: 500, latencyCrit: 1000,
@@ -788,7 +974,7 @@ function SettingsView() {
           <div className="cas-settings-body">
             {[
               ['System',      'ZINGSA CORS Alert System v2.1.0'],
-              ['Network',     'ZimCORS — Zimbabwe National CORS'],
+              ['Network',     'ZimCORS - Zimbabwe National CORS'],
               ['Stations',    `${MAP_STATIONS.length} registered`],
               ['Data Format', 'RINEX 3.04 / RTCM 3.3'],
               ['Time Zone',   'UTC +2 (CAT)'],
@@ -806,10 +992,11 @@ function SettingsView() {
   );
 }
 
-/* ─────────────────── MAIN PAGE ─────────────────────────────── */
+/* Main page */
 export default function CorsAlertSystemPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedStation, setSelectedStation] = useState(null);
+  const [corsMapTileMode, setCorsMapTileMode] = useState('hybrid');
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -825,17 +1012,18 @@ export default function CorsAlertSystemPage() {
 
   const onlineCount = MAP_STATIONS.filter(s => s.status === 'online').length;
   const onlinePct   = Math.round((onlineCount / MAP_STATIONS.length) * 100);
+  const corsMapTileProps = africaMapTileLayerProps(corsMapTileMode);
 
   return (
     <div className="cas-page">
 
-      {/* ── Navigation ──────────────────────────────────────── */}
+      {/* Navigation */}
       <nav className="cas-nav">
         <div className="cas-nav-brand">
           <div className="cas-nav-logo"><Satellite size={18} color="#fff" /></div>
           <div className="cas-nav-title">
-            <strong>ZINGSA CORS Alert System</strong>
-            <span>Real-time Monitoring &amp; Intelligent Alert System</span>
+            <strong>ZINGSA NCORS</strong>
+            <span>National CORS Infrastructure Services</span>
           </div>
         </div>
 
@@ -857,10 +1045,10 @@ export default function CorsAlertSystemPage() {
         </div>
       </nav>
 
-      {/* ── Body ────────────────────────────────────────────── */}
+      {/* Body */}
       <div className="cas-body">
 
-        {/* ── DASHBOARD TAB ─────────────────────────────────── */}
+        {/* Dashboard tab */}
         {activeTab === 'dashboard' && (
           <>
             {/* Stats row */}
@@ -907,7 +1095,7 @@ export default function CorsAlertSystemPage() {
                 <div className="cas-stat-left">
                   <div className="cas-stat-label">Today&apos;s Uptime</div>
                   <div className="cas-stat-value green">99.2%</div>
-                  <div className="cas-stat-note">Target: ≥98%</div>
+                  <div className="cas-stat-note">Target: &gt;=98%</div>
                 </div>
                 <div className="cas-stat-icon" style={{ background:'rgba(34,197,94,0.12)', color:'#22c55e' }}>
                   <Activity size={22} />
@@ -928,6 +1116,68 @@ export default function CorsAlertSystemPage() {
               </div>
             </div>
 
+            <section className="cas-gnss-intel">
+              <div className="cas-card-header">
+                <div>
+                  <span className="cas-card-title">NCORS Network Monitor</span>
+                  <p className="cas-gnss-subtitle">Real-Time GNSS Station Availability &amp; Service Status</p>
+                </div>
+                <span className="cas-gnss-pill">NCORS Monitoring</span>
+              </div>
+              <div className="cas-gnss-body">
+                <div className="cas-availability-panel">
+                  <div className="cas-availability-head">
+                    <div>
+                      <div className="cas-gnss-monitor-title">2026 Station Availability</div>
+                      <p>IGS-style monthly uptime heatmap by CORS station</p>
+                    </div>
+                    <div className="cas-months">
+                      {AVAILABILITY_MONTHS.map(month => <span key={month}>{month}</span>)}
+                    </div>
+                  </div>
+                  <div className="cas-availability-legend" aria-label="Station availability color key">
+                    <strong>Color key</strong>
+                    <span><i className="excellent" />Excellent: 99-100%</span>
+                    <span><i className="good" />Good: 97-98.9%</span>
+                    <span><i className="watch" />Watch: below 97%</span>
+                  </div>
+
+                  <div className="cas-availability-list">
+                    {GNSS_AVAILABILITY.map(row => (
+                      <div key={row.station} className="cas-availability-row">
+                        <div className="cas-availability-station">
+                          <strong>{row.station}</strong>
+                          <span>{row.name}</span>
+                        </div>
+                        <div className="cas-availability-months">
+                          {row.monthly.map((value, index) => (
+                            <span
+                              key={`${row.station}-${AVAILABILITY_MONTHS[index]}`}
+                              className={value >= 99 ? 'excellent' : value >= 97 ? 'good' : 'watch'}
+                              title={`${AVAILABILITY_MONTHS[index]} ${value}%`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="cas-year-average">
+                    <div className="cas-year-average-title">Year Average</div>
+                    {GNSS_AVAILABILITY.map(row => (
+                      <div key={`${row.station}-avg`} className="cas-year-average-row">
+                        <strong>{row.station}</strong>
+                        <div className="cas-availability-bar" aria-label={`${row.station} yearly average ${row.availability}%`}>
+                          <span style={{ width: `${row.availability}%` }} />
+                        </div>
+                        <span>{row.availability.toFixed(1)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             {/* Map + Alerts grid */}
             <div className="cas-main-grid">
               <div className="cas-card">
@@ -935,20 +1185,23 @@ export default function CorsAlertSystemPage() {
                   <span className="cas-card-title">CORS Network Map</span>
                 </div>
                 <div className="cas-map-wrap">
-                  <MapContainer center={[-19.0, 29.8]} zoom={6}
+                  <MapContainer key={`cors-alert-map-${corsMapTileMode}`} center={ZIMBABWE_MAP_CENTER} zoom={6}
+                    minZoom={5}
+                    maxZoom={12}
+                    maxBounds={ZIMBABWE_MAP_BOUNDS}
+                    maxBoundsViscosity={0.85}
                     style={{ height:'100%', width:'100%', background:'#0a1628' }}
-                    scrollWheelZoom>
-                    <TileLayer
-                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                      attribution="Tiles © Esri" maxZoom={19} />
+                    scrollWheelZoom
+                    attributionControl={false}>
+                    <TileLayer key={corsMapTileMode} {...corsMapTileProps} />
                     {MAP_STATIONS.map(st => (
                       <CircleMarker key={st.id} center={[st.lat, st.lon]} radius={8}
                         pathOptions={{ color: markerColor(st.status), fillColor: markerColor(st.status), fillOpacity:0.9, weight:2 }}
                         eventHandlers={{ click: () => setSelectedStation(st.id === selectedStation ? null : st.id) }}>
                         <Tooltip>
-                          <strong>{st.id} — {st.name}</strong>
+                          <strong>{st.id} - {st.name}</strong>
                           <div>Status: {st.status.toUpperCase()}</div>
-                          <div>{st.lat.toFixed(4)}°, {st.lon.toFixed(4)}°</div>
+                          <div>{st.lat.toFixed(4)} deg, {st.lon.toFixed(4)} deg</div>
                         </Tooltip>
                       </CircleMarker>
                     ))}
@@ -961,6 +1214,20 @@ export default function CorsAlertSystemPage() {
                         <div className="cas-map-legend-dot" style={{ background:col }} />
                         <span>{lbl}</span>
                       </div>
+                    ))}
+                  </div>
+
+                  <div className="cas-map-tile-switcher">
+                    {Object.entries(AFRICA_TILE_LAYERS).map(([key, layer]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`cas-map-tile-btn${corsMapTileMode === key ? ' active' : ''}`}
+                        onClick={() => setCorsMapTileMode(key)}
+                        title={layer.label}
+                      >
+                        {layer.short}
+                      </button>
                     ))}
                   </div>
 
@@ -1156,8 +1423,15 @@ export default function CorsAlertSystemPage() {
 
         {activeTab === 'stations'  && <StationsView />}
         {activeTab === 'alerts'    && <AlertsView />}
+        {activeTab === 'analysis'  && <AnalysisView />}
         {activeTab === 'reports'   && <ReportsView />}
-        {activeTab === 'analytics' && <AnalyticsView />}
+        {activeTab === 'monitoring' && <AnalyticsView />}
+        {activeTab === 'data-centre' && (
+          <AnalyticsView
+            title="Data Centre"
+            subtitle="RINEX completeness, archive readiness, uptime reports, and GNSS data services"
+          />
+        )}
         {activeTab === 'logs'      && <LogsView />}
         {activeTab === 'settings'  && <SettingsView />}
 
