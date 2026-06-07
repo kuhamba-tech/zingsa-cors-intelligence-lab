@@ -49,6 +49,13 @@ export async function ingestCorsData({ station, limit = 20, extract = true } = {
   }
 }
 
+export async function getIonosphereStatus({ station } = {}) {
+  const params = new URLSearchParams();
+  if (station) params.set('station', station);
+  const q = params.toString();
+  return request(`/api/ionosphere/status${q ? `?${q}` : ''}`);
+}
+
 export async function getCorsDemoAnalysis({ station, region, date, time, source } = {}) {
   const params = new URLSearchParams();
   if (station) params.set('station', station);

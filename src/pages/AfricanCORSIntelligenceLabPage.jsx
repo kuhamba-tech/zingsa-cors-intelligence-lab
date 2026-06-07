@@ -331,7 +331,13 @@ export default function AfricanCORSIntelligenceLabPage({ onNavigate }) {
           time: analysisTime,
           source: 'tec-analysis',
         });
-        setMetrics(demo.metrics || generateDemoIPMetrics(regionId, station?.name || stationId));
+        const metrics = demo.metrics || generateDemoIPMetrics(regionId, station?.name || stationId);
+        if (selectedMethod === 'location') {
+          metrics.summary = `${metrics.summary || ''} Location-based corridor analysis for ${station?.name || stationId} in ${region.label}.`.trim();
+        } else {
+          metrics.summary = `${metrics.summary || ''} Monitoring & analysis view for ${station?.name || stationId}.`.trim();
+        }
+        setMetrics(metrics);
         if (!demo.hasArchive && demo.message) setApiError(demo.message);
       }
     } catch (err) {
@@ -340,13 +346,16 @@ export default function AfricanCORSIntelligenceLabPage({ onNavigate }) {
     } finally {
       setLoading(false);
     }
-  }, [liveMode, regionId, stationId, stations, region.label, analysisDate, analysisTime]);
+  }, [liveMode, regionId, stationId, stations, region.label, analysisDate, analysisTime, selectedMethod]);
 
-  const refreshGnssCatalog = useCallback(async () => {
+  const refreshGnssCatalog = useCallback(async ({ refresh = false } = {}) => {
     setGnssRefreshing(true);
     try {
-      const catalog = await getCorsCatalog({ source: 'tec-analysis', refresh: true });
+      const catalog = await getCorsCatalog({ source: 'tec-analysis', refresh });
       setGnssCatalog(catalog);
+      if (catalog?.dateRange?.to && !liveMode) {
+        setAnalysisDate(prev => prev || catalog.dateRange.to);
+      }
       return catalog;
     } catch {
       setGnssCatalog(null);
@@ -360,10 +369,16 @@ export default function AfricanCORSIntelligenceLabPage({ onNavigate }) {
     if (!liveMode) refreshGnssCatalog();
   }, [liveMode, refreshGnssCatalog]);
 
+  useEffect(() => {
+    if (gnssCatalog?.dateRange?.to) {
+      setAnalysisDate(gnssCatalog.dateRange.to);
+    }
+  }, [gnssCatalog?.dateRange?.to]);
+
   useEffect(() => { runAnalysis(); }, [liveMode, regionId, stationId, runAnalysis]);
 
   const refreshPageData = useCallback(async () => {
-    if (!liveMode) await refreshGnssCatalog();
+    if (!liveMode) await refreshGnssCatalog({ refresh: true });
     await runAnalysis();
   }, [liveMode, refreshGnssCatalog, runAnalysis]);
 

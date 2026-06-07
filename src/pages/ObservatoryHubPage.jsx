@@ -327,6 +327,7 @@ export default function ObservatoryHubPage() {
         </div>
 
         {/* ── Mid: Sky Map + Priority Targets ── */}
+        {false && (
         <div className="obs-mid-grid">
 
           {/* Sky map */}
@@ -384,6 +385,7 @@ export default function ObservatoryHubPage() {
             </div>
           </article>
         </div>
+        )}
 
         {/* ── Tab Navigation ── */}
         <div className="obs-tabs-bar">

@@ -6,7 +6,7 @@ export const ZIMBABWE_CORS_STATIONS = [
   { id: 'MUTA', name: 'Mutare', siteName: 'MUTARE', lat: -18.978298, lon: 32.677223, refStat: 2, satSys: 'G/R', status: 'online' },
   { id: 'BULA', name: 'Bulawayo', siteName: 'BULAWAYO', lat: -20.165313, lon: 28.641143, refStat: 3, satSys: 'G/R', status: 'online' },
   { id: 'GWER', name: 'Gweru', siteName: 'GWERU', lat: -19.511952, lon: 29.840540, refStat: 4, satSys: 'G/R', status: 'online' },
-  { id: 'HACY', name: 'Harare Central', siteName: 'xHARARE_C', lat: -17.0, lon: 30.0, refStat: 5, satSys: 'G/R', status: 'degraded' },
+  { id: 'HACY', name: 'Harare Central', siteName: 'xHARARE_C', lat: -17.825166, lon: 31.033511, refStat: 5, satSys: 'G/R', status: 'degraded' },
   { id: 'MASV', name: 'Masvingo', siteName: 'MASVINGO', lat: -20.087758, lon: 30.831493, refStat: 6, satSys: 'G/R', status: 'online' },
   { id: 'HARA', name: 'Harare', siteName: 'HARARE', lat: -17.781409, lon: 31.048562, refStat: 7, satSys: 'G/R', status: 'online' },
   { id: 'CENT', name: 'Centenary', siteName: 'CENTENARY', lat: -16.731441, lon: 31.118830, refStat: 8, satSys: 'G/R/E/C', status: 'online' },

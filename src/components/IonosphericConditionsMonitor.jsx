@@ -1,14 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, RefreshCw, Waves } from 'lucide-react';
+import { getIonosphereStatus } from '../services/corsApi.js';
+import { IONOSPHERE_MONITOR_STATIONS } from '../utils/corsNetworkData.js';
 import '../styles/ionospheric-conditions.css';
 
-// ── Station data ──
-const CORS_STATIONS = [
-  { id: 'HRE1', name: 'Harare',         vtec: 18.6, s4: 0.32, delay: 8.4,  error: 2.1, rtk: 'FIXED', ppp: 'Normal',  quality: 'LOW' },
-  { id: 'BYO1', name: 'Bulawayo',       vtec: 16.8, s4: 0.21, delay: 6.7,  error: 2.4, rtk: 'FIXED', ppp: 'Normal',  quality: 'LOW' },
-  { id: 'VFA1', name: 'Victoria Falls', vtec: 32.4, s4: 0.58, delay: 12.1, error: 8.7, rtk: 'FLOAT', ppp: 'Delayed', quality: 'MODERATE' },
-  { id: 'GWE1', name: 'Gweru',          vtec: 14.2, s4: 0.18, delay: 5.8,  error: 2.3, rtk: 'FIXED', ppp: 'Normal',  quality: 'LOW' },
-];
+const FALLBACK_STATIONS = IONOSPHERE_MONITOR_STATIONS.map((ref, i) => ({
+  id: ref.id.replace(/_$/, ''),
+  name: ref.name,
+  vtec: 16 + i * 2,
+  s4: 0.18 + i * 0.08,
+  delay: 6 + i,
+  error: 2 + i * 0.3,
+  rtk: i === 2 ? 'FLOAT' : 'FIXED',
+  ppp: i === 2 ? 'Delayed' : 'Normal',
+  quality: i === 2 ? 'MODERATE' : 'LOW',
+}));
 
 // ── GNSS signal performance per frequency ──
 const GNSS_PERFORMANCE = [
@@ -27,10 +33,10 @@ const IMPACT_GUIDE = [
 ];
 
 const STATION_POS = {
-  HRE1: { x: 57, y: 55 },
-  BYO1: { x: 50, y: 63 },
-  VFA1: { x: 44, y: 54 },
-  GWE1: { x: 53, y: 60 },
+  HARA: { x: 57, y: 55 },
+  BULA: { x: 50, y: 63 },
+  VICF: { x: 44, y: 54 },
+  GWER: { x: 53, y: 60 },
 };
 
 // ── Helpers ──
@@ -93,15 +99,142 @@ function TrendChart({ color = '#22d3ee', values = [], height = 110, multiScint =
   );
 }
 
+// ── Canvas TEC map constants ──────────────────────────────────────────────────
+const MAP_LON_MIN = -20, MAP_LON_MAX = 60;
+const MAP_LAT_MAX = 40,  MAP_LAT_MIN = -40;
+
+// Simplified Africa coastal outline [lat, lon] clockwise from NW Morocco
+const AFRICA_OUTLINE = [
+  [36,-6],[37,1],[37,6],[37,11],[33,11],[32,13],[31,20],[32,25],
+  [31,25],[31,30],[31,34],
+  [27,34],[22,37],[15,40],[11.5,43],
+  [11.5,51],[8,48],[5,46],[1,44],
+  [-1,42],[-5,40],[-10,40],[-17,37],[-25,33],
+  [-34,27],[-34.5,19],
+  [-28,17],[-22,14],[-17,12],[-5.5,12],
+  [-1,9],[4,9],[5,3],[5,-2],[5,-8],[4.5,-8],
+  [6.5,-12],[10,-14],[14.5,-17],
+  [21,-17],[27,-13],[33,-8],[36,-6],
+];
+
+function llToCanvas(lat, lon, W, H) {
+  return [
+    (lon - MAP_LON_MIN) / (MAP_LON_MAX - MAP_LON_MIN) * W,
+    (MAP_LAT_MAX - lat) / (MAP_LAT_MAX - MAP_LAT_MIN) * H,
+  ];
+}
+
+function tecToRGB(tec) {
+  const stops = [
+    [0,   [4,  8,   80]],
+    [8,   [0,  40,  200]],
+    [18,  [0,  120, 220]],
+    [28,  [0,  210, 160]],
+    [38,  [0,  220,  60]],
+    [48,  [160,255,   0]],
+    [55,  [255,220,   0]],
+    [63,  [255,120,   0]],
+    [72,  [255, 30,   0]],
+    [80,  [180,  0,   0]],
+  ];
+  tec = Math.max(0, Math.min(80, tec));
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [t0, c0] = stops[i];
+    const [t1, c1] = stops[i + 1];
+    if (tec <= t1) {
+      const f = (tec - t0) / (t1 - t0);
+      return c0.map((v, j) => Math.round(v + f * (c1[j] - v)));
+    }
+  }
+  return [180, 0, 0];
+}
+
+function getTECValue(lat, lon) {
+  // Equatorial ionization anomaly: peak ~5°N, broad east-west band
+  const mainPeak = 78 * Math.exp(-Math.pow(lat - 5, 2) / 220)
+                     * Math.exp(-Math.pow(lon - 5, 2) / 3200);
+  // Wide baseline driven purely by latitude
+  const baseline = 22 * Math.exp(-Math.pow(lat - 5, 2) / 600);
+  return Math.min(80, Math.max(0, mainPeak + baseline));
+}
+
 const MAP_LAYERS = ['VTEC', 'ROTI', 'Scintillation', 'GNSS Delay'];
 const CONSTELLATIONS = ['GPS', 'Galileo', 'BeiDou', 'GLONASS'];
 
-function TecMap({ stations }) {
+function TecMap() {
   const [layer,  setLayer]  = useState('VTEC');
   const [consts, setConsts] = useState({ GPS: true, Galileo: true, BeiDou: true, GLONASS: true });
-  const [popup,  setPopup]  = useState(null);
+  const canvasRef = useRef(null);
 
   const toggle = name => setConsts(c => ({ ...c, [name]: !c[name] }));
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // 1. Dark background
+    ctx.fillStyle = '#020c1a';
+    ctx.fillRect(0, 0, W, H);
+
+    // 2. TEC heatmap via ImageData (fast batch)
+    const img  = ctx.createImageData(W, H);
+    const data = img.data;
+    for (let py = 0; py < H; py++) {
+      for (let px = 0; px < W; px++) {
+        const lat = MAP_LAT_MAX - (py / H) * (MAP_LAT_MAX - MAP_LAT_MIN);
+        const lon = MAP_LON_MIN + (px / W) * (MAP_LON_MAX - MAP_LON_MIN);
+        const [r, g, b] = tecToRGB(getTECValue(lat, lon));
+        const i = (py * W + px) * 4;
+        data[i] = r; data[i+1] = g; data[i+2] = b; data[i+3] = 230;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+
+    // 3. Lat/lon grid lines (dashed, subtle)
+    ctx.setLineDash([2, 5]);
+    ctx.lineWidth = 0.6;
+    [20, 0, -20].forEach(lat => {
+      const [, y] = llToCanvas(lat, 0, W, H);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y);
+      ctx.strokeStyle = lat === 0 ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.13)';
+      ctx.stroke();
+    });
+    [0, 20, 40].forEach(lon => {
+      const [x] = llToCanvas(0, lon, W, H);
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H);
+      ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // 4. Africa continent outline
+    ctx.beginPath();
+    AFRICA_OUTLINE.forEach(([lat, lon], idx) => {
+      const [x, y] = llToCanvas(lat, lon, W, H);
+      if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth   = 1.4;
+    ctx.stroke();
+
+    // 5. Lat/lon text labels drawn on canvas
+    ctx.font      = 'bold 9px Inter,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.textAlign = 'right';
+    [{ lat:20,label:'20°N'},{lat:0,label:'0°'},{lat:-20,label:'20°S'},{lat:-40,label:'40°S'}].forEach(({ lat, label }) => {
+      const [, y] = llToCanvas(lat, MAP_LON_MIN, W, H);
+      ctx.fillText(label, W - 4, y + 3);
+    });
+    ctx.textAlign = 'center';
+    [{ lon:-20,label:'20°W'},{lon:0,label:'0°'},{lon:20,label:'20°E'},{lon:40,label:'40°E'},{lon:60,label:'60°E'}].forEach(({ lon, label }) => {
+      const [x] = llToCanvas(MAP_LAT_MIN, lon, W, H);
+      ctx.fillText(label, x, H - 3);
+    });
+  }, [layer]);
 
   return (
     <div>
@@ -131,62 +264,32 @@ function TecMap({ stations }) {
         </div>
       </div>
 
-      {/* Map canvas */}
-      <div className="icm2-tec-map" onClick={() => setPopup(null)}>
-        <div className="icm2-tec-heatmap" />
-        <div className="icm2-map-lat-labels">
-          <span>20°N</span><span>0°</span><span>20°S</span><span>40°S</span>
-        </div>
-        <div className="icm2-map-lon-labels">
-          <span>20°W</span><span>0°</span><span>20°E</span><span>40°E</span><span>60°E</span>
-        </div>
-
-        {stations.map(s => {
-          const pos = STATION_POS[s.id] || { x: 55, y: 58 };
-          const isOpen = popup?.id === s.id;
-          return (
-            <div
-              key={s.id}
-              className="icm2-station-marker"
-              style={{ left: `${pos.x}%`, top: `${pos.y}%`, '--dot': impactColor(s.quality) }}
-              onClick={e => { e.stopPropagation(); setPopup(isOpen ? null : s); }}
-            >
-              <span className="icm2-station-dot" />
-              <span className="icm2-station-label">{s.id}</span>
-              {isOpen && (
-                <div className="icm2-station-popup">
-                  <div className="icm2-popup-title">{s.id} — {s.name}</div>
-                  {[
-                    ['VTEC',       `${s.vtec} TECU`, null],
-                    ['S4 Index',   s.s4.toFixed(2),  s.s4 >= 0.5 ? '#ef4444' : s.s4 >= 0.2 ? '#eab308' : '#22c55e'],
-                    ['RTK Status', s.rtk,             s.rtk === 'FIXED' ? '#22c55e' : '#eab308'],
-                    ['PPP',        s.ppp,             s.ppp === 'Normal' ? '#22c55e' : '#eab308'],
-                    ['Pos. Error', `${s.error} mm`,   null],
-                  ].map(([k, v, c]) => (
-                    <div key={k} className="icm2-popup-row">
-                      <span>{k}</span>
-                      <strong style={{ color: c || '#e2e8f0' }}>{v}</strong>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
+      {/* Canvas map */}
+      <div className="icm2-tec-map">
+        {/* Colorbar */}
         <div className="icm2-tec-colorbar">
+          <div className="icm2-colorbar-labels top"><span>TECU</span></div>
           <div className="icm2-colorbar-gradient" />
           <div className="icm2-colorbar-labels">
             <span>80</span><span>60</span><span>40</span><span>20</span><span>0</span>
           </div>
         </div>
 
+        {/* Heatmap canvas */}
+        <canvas
+          ref={canvasRef}
+          width={520}
+          height={480}
+          className="icm2-tec-canvas"
+        />
+
+        {/* Bottom legend */}
         <div className="icm2-tec-legend">
           {[
-            { label: 'Low (0-10)',       color: '#3b82f6' },
-            { label: 'Moderate (10-30)', color: '#22c55e' },
-            { label: 'High (30-60)',     color: '#eab308' },
-            { label: 'Very High (>60)',  color: '#ef4444' },
+            { label: 'Low (0-10)',       color: '#003acc' },
+            { label: 'Moderate (10-30)', color: '#00cc88' },
+            { label: 'High (30-60)',     color: '#ffcc00' },
+            { label: 'Very High (>60)',  color: '#ff2200' },
           ].map(item => (
             <span key={item.label} className="icm2-legend-item">
               <i style={{ background: item.color }} />{item.label}
@@ -201,7 +304,9 @@ function TecMap({ stations }) {
 function demoData() {
   return {
     mode: 'demo',
-    station: 'HRE1',
+    station: 'HARA',
+    stations: FALLBACK_STATIONS,
+    positions: STATION_POS,
     vtec_tecu: 18.6,
     s4_index: 0.32,
     phase_sigma_rad: 0.14,
@@ -221,24 +326,28 @@ export default function IonosphericConditionsMonitor() {
   const [status, setStatus]   = useState(demoData);
   const [loading, setLoading] = useState(true);
 
+  const loadStatus = async () => {
+    setLoading(true);
+    try {
+      const json = await getIonosphereStatus({ station: 'HARA' });
+      setStatus({ ...demoData(), ...json, mode: json.mode || 'live' });
+    } catch {
+      setStatus(demoData());
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      try {
-        const res = await fetch('/api/ionosphere/status');
-        if (!res.ok) throw new Error('no live api');
-        const json = await res.json();
-        if (alive) setStatus({ ...demoData(), ...json, mode: 'live' });
-      } catch {
-        if (alive) setStatus(demoData());
-      } finally {
-        if (alive) setLoading(false);
-      }
-    };
-    load();
-    const id = setInterval(load, 10 * 60 * 1000);
-    return () => { alive = false; clearInterval(id); };
+    loadStatus();
+    const id = setInterval(loadStatus, 10 * 60 * 1000);
+    return () => clearInterval(id);
   }, []);
+
+  const corsStations = status.stations?.length ? status.stations : FALLBACK_STATIONS;
+  const stationPos = status.positions || STATION_POS;
+  const primaryStation = status.station || 'HARA';
+  const primaryName = corsStations.find(s => s.id === primaryStation)?.name || 'Harare';
 
   const tecTrend   = useMemo(() => Array.from({ length: 25 }, (_, i) => 11 + Math.sin(i / 3) * 5 + Math.max(0, 9 - Math.abs(i - 13)) * 1.7), []);
   const scintTrend = useMemo(() => Array.from({ length: 25 }, (_, i) => 0.18 + Math.max(0, 8 - Math.abs(i - 15)) * 0.075 + Math.sin(i) * 0.035), []);
@@ -277,7 +386,8 @@ export default function IonosphericConditionsMonitor() {
             <button
               type="button"
               className="icm2-refresh-btn"
-              onClick={() => setStatus(s => ({ ...s, updated_utc: new Date().toISOString() }))}
+              onClick={loadStatus}
+              disabled={loading}
               title="Refresh"
             >
               <RefreshCw size={14} />
@@ -370,7 +480,7 @@ export default function IonosphericConditionsMonitor() {
               <div className="icm2-panel-hdr">
                 <span className="icm2-card-title">AFRICA IONOSPHERIC TEC MAP</span>
               </div>
-              <TecMap stations={CORS_STATIONS} />
+              <TecMap />
             </article>
 
             <div className="icm2-charts-col">
@@ -383,7 +493,7 @@ export default function IonosphericConditionsMonitor() {
                   <div className="icm2-chart-yaxis"><span>40</span><span>30</span><span>20</span><span>10</span><span>0</span></div>
                   <TrendChart values={tecTrend} color="#a855f7" height={110} />
                 </div>
-                <p className="icm2-chart-note">Station: HRE1 (Harare)</p>
+                <p className="icm2-chart-note">Station: {primaryStation} ({primaryName})</p>
               </article>
 
               <article className="icm2-panel">
@@ -396,7 +506,7 @@ export default function IonosphericConditionsMonitor() {
                   <span><i style={{ background: '#22c55e' }} />Low (&lt;0.2)</span>
                 </div>
                 <TrendChart values={scintTrend} color="#22c55e" height={100} multiScint />
-                <p className="icm2-chart-note">Station: HRE1 (Harare)</p>
+                <p className="icm2-chart-note">Station: {primaryStation} ({primaryName})</p>
               </article>
 
               <article className="icm2-panel">
@@ -407,7 +517,7 @@ export default function IonosphericConditionsMonitor() {
                   <div className="icm2-chart-yaxis sm"><span>15</span><span>10</span><span>5</span><span>0</span></div>
                   <TrendChart values={delayTrend} color="#22d3ee" height={100} />
                 </div>
-                <p className="icm2-chart-note">Station: HRE1 (Harare)</p>
+                <p className="icm2-chart-note">Station: {primaryStation} ({primaryName})</p>
               </article>
 
               <article className="icm2-panel">
@@ -455,7 +565,7 @@ export default function IonosphericConditionsMonitor() {
                 <div className="icm2-kv"><span>Activity</span><strong style={{ color: '#22c55e' }}>LOW</strong></div>
                 <div className="icm2-kv"><span>Disturbance</span><strong>None detected</strong></div>
                 <div className="icm2-kv"><span>Alert Threshold</span><strong style={{ color: '#475569' }}>0.5 TECU/min</strong></div>
-                <div className="icm2-kv"><span>Station</span><strong>HRE1 (Harare)</strong></div>
+                <div className="icm2-kv"><span>Station</span><strong>{primaryStation} ({primaryName})</strong></div>
               </div>
             </article>
 
@@ -537,7 +647,7 @@ export default function IonosphericConditionsMonitor() {
                   </tr>
                 </thead>
                 <tbody>
-                  {CORS_STATIONS.map(s => (
+                  {corsStations.map(s => (
                     <tr key={s.id}>
                       <td>
                         <span className="icm2-status-dot" style={{ background: impactColor(s.quality) }} />

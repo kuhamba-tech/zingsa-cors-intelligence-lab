@@ -10,51 +10,15 @@ import {
 } from 'lucide-react';
 import { ZIMBABWE_CORS_STATIONS } from '../data/zimbabweCorsStations.js';
 import { AFRICA_TILE_LAYERS, africaMapTileLayerProps } from '../components/africaMapConfig.js';
+import { CorsAlertDataProvider, useCorsAlertData } from '../context/CorsAlertDataContext.jsx';
+import DataCentreView from '../components/DataCentreView.jsx';
 import '../styles/cors-alert-system.css';
 
-/* Shared mock data */
-const STATUS_OVERRIDE = {
-  CENT: 'critical', HACY: 'critical',
-  HARA: 'warning',  MUTA: 'warning', BULA: 'warning',
-  KARO: 'offline',
-};
-
-const MAP_STATIONS = ZIMBABWE_CORS_STATIONS.map(st => ({
-  ...st,
-  status: STATUS_OVERRIDE[st.id] ?? (st.status === 'degraded' ? 'warning' : st.status),
-}));
 const ZIMBABWE_MAP_CENTER = [-19.0, 29.6];
 const ZIMBABWE_MAP_BOUNDS = [[-24.2, 22.8], [-13.8, 36.2]];
 
-const ACTIVE_ALERTS = [
-  { id: 1, level: 'CRITICAL', station: 'CENT', problem: 'Data stream offline',      time: '09:35', duration: '21 min',  status: 'active',   action: 'investigate' },
-  { id: 2, level: 'WARNING',  station: 'HARA', problem: 'Low positioning accuracy', time: '09:42', duration: '14 min',  status: 'active',   action: 'monitor' },
-  { id: 3, level: 'WARNING',  station: 'MUTA', problem: 'High multipath detected',  time: '09:50', duration: '6 min',   status: 'active',   action: 'monitor' },
-  { id: 4, level: 'CRITICAL', station: 'HACY', problem: 'Internet connection lost', time: '09:51', duration: '5 min',   status: 'active',   action: 'investigate' },
-  { id: 5, level: 'WARNING',  station: 'BULA', problem: 'High data latency',        time: '09:53', duration: '3 min',   status: 'active',   action: 'monitor' },
-  { id: 6, level: 'INFO',     station: 'LUPA', problem: 'Scheduled maintenance',    time: '08:00', duration: '55 min',  status: 'resolved', action: 'view' },
-  { id: 7, level: 'WARNING',  station: 'GWER', problem: 'Low satellite count',      time: '07:45', duration: '1h 11m',  status: 'resolved', action: 'view' },
-  { id: 8, level: 'INFO',     station: 'BEIT', problem: 'RINEX upload delayed',     time: '07:30', duration: '28 min',  status: 'resolved', action: 'view' },
-  { id: 9, level: 'CRITICAL', station: 'CHIM', problem: 'Power interruption',       time: '06:12', duration: '3h 44m',  status: 'resolved', action: 'view' },
-  { id:10, level: 'INFO',     station: 'ZINH', problem: 'Firmware update complete', time: '05:00', duration: '2 min',   status: 'resolved', action: 'view' },
-];
-
-const NOTIFICATIONS = [
-  { id: 1, station: 'CENT', msg: 'Data stream has been offline for more than 20 minutes.', time: '09:35', severity: 'critical' },
-  { id: 2, station: 'MUTA', msg: 'High multipath detected. Check surroundings.',           time: '09:50', severity: 'warning' },
-  { id: 3, station: 'BULA', msg: 'RINEX file upload successful.',                           time: '09:52', severity: 'info' },
-];
-
-const HEALTH = [
-  { label: 'Normal',   value: 17, color: '#22c55e' },
-  { label: 'Warning',  value:  4, color: '#f59e0b' },
-  { label: 'Critical', value:  2, color: '#ef4444' },
-  { label: 'Offline',  value:  1, color: '#64748b' },
-];
-const HEALTH_TOTAL = HEALTH.reduce((s, h) => s + h.value, 0);
-
 const NAV_TABS = [
-  { id: 'dashboard', label: 'Dashboard',  icon: BarChart3 },
+  { id: 'dashboard', label: 'Ops Overview', icon: BarChart3 },
   { id: 'stations',  label: 'Stations',   icon: Radio },
   { id: 'monitoring', label: 'Monitoring', icon: Activity },
   { id: 'alerts',    label: 'Alerts',     icon: AlertTriangle },
@@ -72,39 +36,6 @@ const STATION_POPUP_DETAILS = {
   MUTA: { location: 'Mutare',    lastData: '09:49:33', gnss: 'Fair',   gnssColor: 'orange',power: 'OK', internet: 'Online',  internetColor: 'green', latency: '88ms' },
   BULA: { location: 'Bulawayo',  lastData: '09:52:10', gnss: 'Good',   gnssColor: 'green', power: 'OK', internet: 'Online',  internetColor: 'green', latency: '620ms' },
 };
-
-/* Station table extended data */
-const STATION_TABLE_DATA = MAP_STATIONS.map((st, i) => ({
-  ...st,
-  lastData: st.status === 'offline' ? '--:--:--'
-    : `0${8 + (i % 2)}:${String(30 + (i * 7 % 29)).padStart(2,'0')}:${String(i * 13 % 59).padStart(2,'0')}`,
-  gnssQuality: st.status === 'critical' ? 28 + (i % 18)
-    : st.status === 'warning' ? 60 + (i % 18)
-    : 82 + (i % 14),
-  satellites:  st.status === 'offline' ? 0 : 8 + (i % 9),
-  latency:     st.status === 'critical' || st.status === 'offline' ? null : 35 + i * 18,
-  rinexToday:  st.status === 'offline' ? 0 : 22 + (i % 3),
-  uptime:      st.status === 'offline' ? 0
-    : st.status === 'critical' ? 72 + (i % 14)
-    : st.status === 'warning'  ? 88 + (i % 8)
-    : 97 + (i % 3),
-}));
-
-/* Chart helpers */
-function genSeries(base, amp, n = 25) {
-  return Array.from({ length: n }, (_, i) =>
-    Math.round((base + Math.sin(i * 0.6) * amp + (Math.random() - 0.5) * amp * 0.5) * 10) / 10
-  );
-}
-
-const SIGNAL_DATA   = genSeries(78, 8);
-const ACCURACY_DATA = genSeries(1.8, 0.4);
-const ALERT_BARS = [
-  { label: 'Critical', value: 3,  color: '#ef4444' },
-  { label: 'Warning',  value: 4,  color: '#f59e0b' },
-  { label: 'Resolved', value: 12, color: '#22c55e' },
-  { label: 'Info',     value: 5,  color: '#3b82f6' },
-];
 
 /* 7-day uptime trend */
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -161,12 +92,6 @@ const MONITORING_TIME_WINDOWS = {
   },
 };
 const AVAILABILITY_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-const GNSS_AVAILABILITY = [
-  { station: 'HRE1', name: 'Harare', availability: 99.3, monthly: [99, 100, 99, 99, 100, 99, 99, 100, 99, 99, 100, 99] },
-  { station: 'BYO1', name: 'Bulawayo', availability: 97.8, monthly: [98, 98, 96, 98, 99, 98, 98, 97, 98, 98, 99, 98] },
-  { station: 'VFA1', name: 'Victoria Falls', availability: 99.1, monthly: [99, 99, 100, 99, 99, 99, 98, 99, 100, 99, 99, 99] },
-  { station: 'GWE1', name: 'Gweru', availability: 98.4, monthly: [99, 98, 98, 99, 96, 99, 98, 99, 99, 98, 99, 99] },
-];
 
 /* Logs */
 const LOG_ENTRIES = [
@@ -294,18 +219,19 @@ function StatusBadge({ status }) {
 
 /* TAB: STATIONS */
 function StationsView() {
+  const { stationTableData, refresh, loading } = useCorsAlertData();
   const [filter, setFilter] = useState('all');
   const [search, setSearch]  = useState('');
 
   const counts = {
-    all:      STATION_TABLE_DATA.length,
-    online:   STATION_TABLE_DATA.filter(s => s.status === 'online').length,
-    warning:  STATION_TABLE_DATA.filter(s => s.status === 'warning').length,
-    critical: STATION_TABLE_DATA.filter(s => s.status === 'critical').length,
-    offline:  STATION_TABLE_DATA.filter(s => s.status === 'offline').length,
+    all:      stationTableData.length,
+    online:   stationTableData.filter(s => s.status === 'online').length,
+    warning:  stationTableData.filter(s => s.status === 'warning').length,
+    critical: stationTableData.filter(s => s.status === 'critical').length,
+    offline:  stationTableData.filter(s => s.status === 'offline').length,
   };
 
-  const filtered = STATION_TABLE_DATA.filter(st => {
+  const filtered = stationTableData.filter(st => {
     if (filter !== 'all' && st.status !== filter) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -327,9 +253,9 @@ function StationsView() {
       <div className="cas-tab-header">
         <div>
           <h2 className="cas-tab-title">CORS Stations</h2>
-          <p className="cas-tab-subtitle">All {STATION_TABLE_DATA.length} stations in the ZimCORS network</p>
+          <p className="cas-tab-subtitle">All {stationTableData.length} stations in the ZimCORS network</p>
         </div>
-        <button type="button" className="cas-btn-primary"><RefreshCw size={13} /> Refresh</button>
+        <button type="button" className="cas-btn-primary" onClick={refresh} disabled={loading}><RefreshCw size={13} /> Refresh</button>
       </div>
 
       <div className="cas-filter-bar">
@@ -411,27 +337,28 @@ function StationsView() {
 
 /* TAB: ALERTS */
 function AlertsView() {
+  const { alerts, handleAlertAction, refresh, loading } = useCorsAlertData();
   const [filter, setFilter] = useState('all');
 
   const counts = {
-    all:      ACTIVE_ALERTS.length,
-    critical: ACTIVE_ALERTS.filter(a => a.level === 'CRITICAL').length,
-    warning:  ACTIVE_ALERTS.filter(a => a.level === 'WARNING').length,
-    resolved: ACTIVE_ALERTS.filter(a => a.status === 'resolved').length,
-    info:     ACTIVE_ALERTS.filter(a => a.level === 'INFO').length,
+    all:      alerts.length,
+    critical: alerts.filter(a => a.level === 'CRITICAL').length,
+    warning:  alerts.filter(a => a.level === 'WARNING').length,
+    resolved: alerts.filter(a => a.status === 'resolved').length,
+    info:     alerts.filter(a => a.level === 'INFO').length,
   };
 
-  const filtered = ACTIVE_ALERTS.filter(a => {
+  const filtered = alerts.filter(a => {
     if (filter === 'all')      return true;
     if (filter === 'resolved') return a.status === 'resolved';
     return a.level === filter.toUpperCase();
   });
 
   const SUMMARY = [
-    { label: 'Active Critical', value: ACTIVE_ALERTS.filter(a=>a.level==='CRITICAL'&&a.status==='active').length, color:'#ef4444', bg:'rgba(239,68,68,0.1)' },
-    { label: 'Active Warning',  value: ACTIVE_ALERTS.filter(a=>a.level==='WARNING'&&a.status==='active').length,  color:'#f59e0b', bg:'rgba(245,158,11,0.1)' },
-    { label: 'Resolved Today',  value: ACTIVE_ALERTS.filter(a=>a.status==='resolved').length,                     color:'#22c55e', bg:'rgba(34,197,94,0.1)'  },
-    { label: 'Total Today',     value: ACTIVE_ALERTS.length,                                                      color:'#60a5fa', bg:'rgba(96,165,250,0.1)' },
+    { label: 'Active Critical', value: alerts.filter(a=>a.level==='CRITICAL'&&a.status==='active').length, color:'#ef4444', bg:'rgba(239,68,68,0.1)' },
+    { label: 'Active Warning',  value: alerts.filter(a=>a.level==='WARNING'&&a.status==='active').length,  color:'#f59e0b', bg:'rgba(245,158,11,0.1)' },
+    { label: 'Resolved Today',  value: alerts.filter(a=>a.status==='resolved').length,                     color:'#22c55e', bg:'rgba(34,197,94,0.1)'  },
+    { label: 'Total Today',     value: alerts.length,                                                      color:'#60a5fa', bg:'rgba(96,165,250,0.1)' },
   ];
 
   const ALERT_FILTERS = [
@@ -449,7 +376,7 @@ function AlertsView() {
           <h2 className="cas-tab-title">Alert Management</h2>
           <p className="cas-tab-subtitle">Active and historical alerts for today</p>
         </div>
-        <button type="button" className="cas-btn-primary"><RefreshCw size={13} /> Refresh</button>
+        <button type="button" className="cas-btn-primary" onClick={refresh} disabled={loading}><RefreshCw size={13} /> Refresh</button>
       </div>
 
       <div className="cas-summary-cards">
@@ -502,7 +429,7 @@ function AlertsView() {
                 </td>
                 <td>
                   {a.action !== 'view'
-                    ? <button type="button" className={`cas-action-btn ${a.action}`}>
+                    ? <button type="button" className={`cas-action-btn ${a.action}`} onClick={() => handleAlertAction(a, a.action)}>
                         {a.action === 'investigate' ? 'Investigate' : 'Monitor'}
                       </button>
                     : <button type="button" className="cas-action-btn view"><Eye size={11} /> View</button>}
@@ -518,20 +445,21 @@ function AlertsView() {
 
 /* TAB: ANALYSIS */
 function AnalysisView() {
-  const activeAlerts = ACTIVE_ALERTS.filter(a => a.status === 'active');
+  const { alerts, mapStations, stationTableData } = useCorsAlertData();
+  const activeAlerts = alerts.filter(a => a.status === 'active');
   const criticalAlerts = activeAlerts.filter(a => a.level === 'CRITICAL').length;
   const warningAlerts = activeAlerts.filter(a => a.level === 'WARNING').length;
-  const onlineCount = MAP_STATIONS.filter(s => s.status === 'online').length;
-  const networkHealth = Math.round((onlineCount / MAP_STATIONS.length) * 100);
-  const avgSignal = Math.round(STATION_TABLE_DATA.reduce((sum, st) => sum + st.gnssQuality, 0) / STATION_TABLE_DATA.length);
-  const avgUptime = (STATION_TABLE_DATA.reduce((sum, st) => sum + st.uptime, 0) / STATION_TABLE_DATA.length).toFixed(1);
+  const operational = mapStations.filter(s => s.status === 'online' || s.status === 'warning').length;
+  const networkHealth = Math.round((operational / mapStations.length) * 100);
+  const avgSignal = Math.round(stationTableData.reduce((sum, st) => sum + st.gnssQuality, 0) / stationTableData.length);
+  const avgUptime = (stationTableData.reduce((sum, st) => sum + st.uptime, 0) / stationTableData.length).toFixed(1);
 
   const insightCards = [
     {
       tone: 'cyan',
       title: 'What The Data Shows',
       icon: 'DATA',
-      text: `The ZimCORS network is operating at ${networkHealth}% health with ${onlineCount}/${MAP_STATIONS.length} stations online. Current alert load includes ${criticalAlerts} critical and ${warningAlerts} warning events.`,
+      text: `The ZimCORS network is operating at ${networkHealth}% health with ${operational}/${mapStations.length} stations operational. Current alert load includes ${criticalAlerts} critical and ${warningAlerts} warning events.`,
     },
     {
       tone: 'orange',
@@ -688,6 +616,7 @@ function AnalyticsView({
   title = 'Monitoring',
   subtitle = 'Network performance metrics and trends',
 }) {
+  const { stationTableData } = useCorsAlertData();
   const [timeWindow, setTimeWindow] = useState('week');
   const activeWindow = MONITORING_TIME_WINDOWS[timeWindow];
   const avgUptime = (
@@ -707,7 +636,7 @@ function AnalyticsView({
   }));
 
   const rangeSignalLift = { week: 0, month: 2, year: 4 }[timeWindow];
-  const signalByStation = STATION_TABLE_DATA.slice(0, 8).map(st => ({
+  const signalByStation = stationTableData.slice(0, 8).map(st => ({
     label: st.id,
     value: Math.min(99, st.gnssQuality + rangeSignalLift),
     color: st.gnssQuality + rangeSignalLift > 80 ? '#22c55e' : st.gnssQuality + rangeSignalLift > 60 ? '#f59e0b' : '#ef4444',
@@ -975,7 +904,7 @@ function SettingsView() {
             {[
               ['System',      'ZINGSA CORS Alert System v2.1.0'],
               ['Network',     'ZimCORS - Zimbabwe National CORS'],
-              ['Stations',    `${MAP_STATIONS.length} registered`],
+              ['Stations',    `${mapStations.length} registered`],
               ['Data Format', 'RINEX 3.04 / RTCM 3.3'],
               ['Time Zone',   'UTC +2 (CAT)'],
               ['Last Restart','20 May 2025 06:00:00'],
@@ -993,9 +922,33 @@ function SettingsView() {
 }
 
 /* Main page */
-export default function CorsAlertSystemPage() {
+function CorsAlertSystemPage() {
+  const {
+    mapStations,
+    activeAlerts,
+    alerts,
+    notifications,
+    networkStatus,
+    healthSegments,
+    healthTotal,
+    gnssAvailability,
+    alertSummary,
+    avgUptime,
+    signalData,
+    accuracyData,
+    loading,
+    error,
+    refresh,
+    selectedStationId,
+    setSelectedStationId,
+    showNotifications,
+    setShowNotifications,
+    handleAlertAction,
+  } = useCorsAlertData();
+
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedStation, setSelectedStation] = useState(null);
+  const selectedStation = selectedStationId;
+  const setSelectedStation = setSelectedStationId;
   const [corsMapTileMode, setCorsMapTileMode] = useState('hybrid');
   const [now, setNow] = useState(new Date());
 
@@ -1010,8 +963,9 @@ export default function CorsAlertSystemPage() {
   const fmtDate = useCallback(d =>
     d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }), []);
 
-  const onlineCount = MAP_STATIONS.filter(s => s.status === 'online').length;
-  const onlinePct   = Math.round((onlineCount / MAP_STATIONS.length) * 100);
+  const operationalCount = networkStatus.operational ?? mapStations.filter(s => s.status === 'online' || s.status === 'warning').length;
+  const operationalPct = Math.round((operationalCount / mapStations.length) * 100);
+  const statusToneClass = networkStatus.tone === 'green' ? 'green' : networkStatus.tone === 'red' ? 'red' : 'orange';
   const corsMapTileProps = africaMapTileLayerProps(corsMapTileMode);
 
   return (
@@ -1038,10 +992,28 @@ export default function CorsAlertSystemPage() {
         </div>
 
         <div className="cas-nav-right">
-          <button type="button" className="cas-bell-btn">
-            <Bell size={18} />
-            <span className="cas-badge">7</span>
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button type="button" className="cas-bell-btn" onClick={() => setShowNotifications(v => !v)}>
+              <Bell size={18} />
+              <span className="cas-badge">{activeAlerts.length}</span>
+            </button>
+            {showNotifications && (
+              <div className="cas-notif-panel">
+                <div className="cas-notif-head">Active Notifications</div>
+                {notifications.length ? notifications.map(n => (
+                  <button key={n.id} type="button" className={`cas-notif-item ${n.severity}`} onClick={() => {
+                    setSelectedStationId(n.station);
+                    setActiveTab('alerts');
+                    setShowNotifications(false);
+                  }}>
+                    <strong>{n.station}</strong>
+                    <span>{n.msg}</span>
+                    <small>{n.time}</small>
+                  </button>
+                )) : <div className="cas-notif-empty">No active notifications</div>}
+              </div>
+            )}
+          </div>
         </div>
       </nav>
 
@@ -1051,13 +1023,18 @@ export default function CorsAlertSystemPage() {
         {/* Dashboard tab */}
         {activeTab === 'dashboard' && (
           <>
+            {error && (
+              <div className="cas-info-banner" style={{ marginBottom: 16, borderColor: 'rgba(249,115,22,0.35)', color: '#fdba74' }}>
+                Using cached demo overlays — API: {error}
+              </div>
+            )}
             {/* Stats row */}
             <div className="cas-stats-row">
               <div className="cas-stat-card">
                 <div className="cas-stat-left">
                   <div className="cas-stat-label">Network Status</div>
-                  <div className="cas-stat-value green">ONLINE</div>
-                  <div className="cas-stat-note">All systems operational</div>
+                  <div className={`cas-stat-value ${statusToneClass}`}>{networkStatus.label}</div>
+                  <div className="cas-stat-note">{networkStatus.note}</div>
                 </div>
                 <div className="cas-stat-icon" style={{ background:'rgba(34,197,94,0.12)', color:'#22c55e' }}>
                   <Wifi size={22} />
@@ -1066,11 +1043,11 @@ export default function CorsAlertSystemPage() {
 
               <div className="cas-stat-card">
                 <div className="cas-stat-left">
-                  <div className="cas-stat-label">Active Stations</div>
+                  <div className="cas-stat-label">Operational Stations</div>
                   <div className="cas-stat-value blue">
-                    {onlineCount} <span style={{ fontSize:'0.9rem', color:'#475569' }}>/ {MAP_STATIONS.length}</span>
+                    {operationalCount} <span style={{ fontSize:'0.9rem', color:'#475569' }}>/ {mapStations.length}</span>
                   </div>
-                  <div className="cas-stat-note">{onlinePct}% Online</div>
+                  <div className="cas-stat-note">{operationalPct}% operational</div>
                 </div>
                 <div className="cas-stat-icon" style={{ background:'rgba(96,165,250,0.12)', color:'#60a5fa' }}>
                   <Radio size={22} />
@@ -1080,10 +1057,10 @@ export default function CorsAlertSystemPage() {
               <div className="cas-stat-card">
                 <div className="cas-stat-left">
                   <div className="cas-stat-label">Active Alerts</div>
-                  <div className="cas-stat-value orange">7</div>
+                  <div className="cas-stat-value orange">{activeAlerts.length}</div>
                   <div className="cas-stat-note">
-                    <span className="cas-stat-dot" style={{ background:'#ef4444' }} /> 3 Critical&nbsp;&nbsp;
-                    <span className="cas-stat-dot" style={{ background:'#f59e0b' }} /> 4 Warning
+                    <span className="cas-stat-dot" style={{ background:'#ef4444' }} /> {activeAlerts.filter(a => a.level === 'CRITICAL').length} Critical&nbsp;&nbsp;
+                    <span className="cas-stat-dot" style={{ background:'#f59e0b' }} /> {activeAlerts.filter(a => a.level === 'WARNING').length} Warning
                   </div>
                 </div>
                 <div className="cas-stat-icon" style={{ background:'rgba(245,158,11,0.12)', color:'#f59e0b' }}>
@@ -1094,7 +1071,7 @@ export default function CorsAlertSystemPage() {
               <div className="cas-stat-card">
                 <div className="cas-stat-left">
                   <div className="cas-stat-label">Today&apos;s Uptime</div>
-                  <div className="cas-stat-value green">99.2%</div>
+                  <div className="cas-stat-value green">{avgUptime}%</div>
                   <div className="cas-stat-note">Target: &gt;=98%</div>
                 </div>
                 <div className="cas-stat-icon" style={{ background:'rgba(34,197,94,0.12)', color:'#22c55e' }}>
@@ -1143,7 +1120,7 @@ export default function CorsAlertSystemPage() {
                   </div>
 
                   <div className="cas-availability-list">
-                    {GNSS_AVAILABILITY.map(row => (
+                    {gnssAvailability.map(row => (
                       <div key={row.station} className="cas-availability-row">
                         <div className="cas-availability-station">
                           <strong>{row.station}</strong>
@@ -1164,7 +1141,7 @@ export default function CorsAlertSystemPage() {
 
                   <div className="cas-year-average">
                     <div className="cas-year-average-title">Year Average</div>
-                    {GNSS_AVAILABILITY.map(row => (
+                    {gnssAvailability.map(row => (
                       <div key={`${row.station}-avg`} className="cas-year-average-row">
                         <strong>{row.station}</strong>
                         <div className="cas-availability-bar" aria-label={`${row.station} yearly average ${row.availability}%`}>
@@ -1194,7 +1171,7 @@ export default function CorsAlertSystemPage() {
                     scrollWheelZoom
                     attributionControl={false}>
                     <TileLayer key={corsMapTileMode} {...corsMapTileProps} />
-                    {MAP_STATIONS.map(st => (
+                    {mapStations.map(st => (
                       <CircleMarker key={st.id} center={[st.lat, st.lon]} radius={8}
                         pathOptions={{ color: markerColor(st.status), fillColor: markerColor(st.status), fillOpacity:0.9, weight:2 }}
                         eventHandlers={{ click: () => setSelectedStation(st.id === selectedStation ? null : st.id) }}>
@@ -1232,7 +1209,7 @@ export default function CorsAlertSystemPage() {
                   </div>
 
                   {selectedStation && STATION_POPUP_DETAILS[selectedStation] && (() => {
-                    const st  = MAP_STATIONS.find(s => s.id === selectedStation);
+                    const st  = mapStations.find(s => s.id === selectedStation);
                     const det = STATION_POPUP_DETAILS[selectedStation];
                     return (
                       <div className="cas-station-popup" style={{ top:20, left:'50%', transform:'translateX(-50%)' }}>
@@ -1278,14 +1255,17 @@ export default function CorsAlertSystemPage() {
                       <tr><th>Level</th><th>Station</th><th>Problem</th><th>Time</th><th>Action</th></tr>
                     </thead>
                     <tbody>
-                      {ACTIVE_ALERTS.filter(a=>a.status==='active').map(alert => (
+                      {activeAlerts.map(alert => (
                         <tr key={alert.id}>
                           <td><span className={`cas-level-badge ${alert.level.toLowerCase()}`}>{alert.level}</span></td>
                           <td><span className="cas-station-id">{alert.station}</span></td>
                           <td><span className="cas-problem-text">{alert.problem}</span></td>
                           <td><span className="cas-time-text">{alert.time}</span></td>
                           <td>
-                            <button type="button" className={`cas-action-btn ${alert.action}`}>
+                            <button type="button" className={`cas-action-btn ${alert.action}`} onClick={() => {
+                              handleAlertAction(alert, alert.action);
+                              setActiveTab('stations');
+                            }}>
                               {alert.action === 'investigate' ? 'Investigate' : 'Monitor'}
                             </button>
                           </td>
@@ -1305,13 +1285,13 @@ export default function CorsAlertSystemPage() {
                 </div>
                 <div className="cas-donut-body">
                   <div className="cas-donut-center">
-                    <DonutChart segments={HEALTH} total={HEALTH_TOTAL} size={130} strokeWidth={22} />
+                    <DonutChart segments={healthSegments} total={healthTotal} size={130} strokeWidth={22} />
                     <div className="cas-donut-label">
-                      <strong>{HEALTH_TOTAL}</strong><span>Total</span>
+                      <strong>{healthTotal}</strong><span>Total</span>
                     </div>
                   </div>
                   <div className="cas-donut-legend">
-                    {HEALTH.map(h => (
+                    {healthSegments.map(h => (
                       <div key={h.label} className="cas-donut-legend-row">
                         <div className="cas-donut-legend-left">
                           <div className="cas-donut-legend-dot" style={{ background:h.color }} />
@@ -1319,7 +1299,7 @@ export default function CorsAlertSystemPage() {
                         </div>
                         <div className="cas-donut-legend-right">
                           <div className="cas-donut-legend-count">{h.value}</div>
-                          <div className="cas-donut-legend-pct">({Math.round((h.value/HEALTH_TOTAL)*100)}%)</div>
+                          <div className="cas-donut-legend-pct">({Math.round((h.value/healthTotal)*100)}%)</div>
                         </div>
                       </div>
                     ))}
@@ -1334,7 +1314,7 @@ export default function CorsAlertSystemPage() {
                 <div className="cas-linechart-body">
                   <div className="cas-chart-svg-wrap">
                     <MultiLineChart width={600} height={90}
-                      series={[{ data:SIGNAL_DATA, color:'#22c55e' }, { data:ACCURACY_DATA, color:'#3b82f6' }]} />
+                      series={[{ data:signalData, color:'#22c55e' }, { data:accuracyData, color:'#3b82f6' }]} />
                   </div>
                   <div className="cas-x-labels">
                     {['00:00','04:00','08:00','12:00','16:00','20:00','24:00'].map(t=><span key={t}>{t}</span>)}
@@ -1352,7 +1332,7 @@ export default function CorsAlertSystemPage() {
                 </div>
                 <div className="cas-barchart-body">
                   <div className="cas-bar-svg-wrap">
-                    <BarChart bars={ALERT_BARS} width={220} height={110} />
+                    <BarChart bars={alertSummary} width={220} height={110} />
                   </div>
                 </div>
               </div>
@@ -1365,7 +1345,7 @@ export default function CorsAlertSystemPage() {
                   <span className="cas-card-title">Recent System Notifications</span>
                 </div>
                 <div className="cas-notif-list">
-                  {NOTIFICATIONS.map(n => (
+                  {notifications.map(n => (
                     <div key={n.id} className="cas-notif-row">
                       <div className="cas-notif-dot" style={{
                         background: n.severity==='critical'?'#ef4444':n.severity==='warning'?'#f59e0b':'#3b82f6'
@@ -1426,16 +1406,19 @@ export default function CorsAlertSystemPage() {
         {activeTab === 'analysis'  && <AnalysisView />}
         {activeTab === 'reports'   && <ReportsView />}
         {activeTab === 'monitoring' && <AnalyticsView />}
-        {activeTab === 'data-centre' && (
-          <AnalyticsView
-            title="Data Centre"
-            subtitle="RINEX completeness, archive readiness, uptime reports, and GNSS data services"
-          />
-        )}
+        {activeTab === 'data-centre' && <DataCentreView />}
         {activeTab === 'logs'      && <LogsView />}
         {activeTab === 'settings'  && <SettingsView />}
 
       </div>
     </div>
+  );
+}
+
+export default function CorsAlertSystemPageWrapper() {
+  return (
+    <CorsAlertDataProvider>
+      <CorsAlertSystemPage />
+    </CorsAlertDataProvider>
   );
 }

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Activity, BarChart3, CloudSun, Radio, Satellite, ShieldCheck } from 'lucide-react';
+import { Activity, BarChart3, CloudSun, Radio, Satellite, ShieldCheck, Telescope, Waves } from 'lucide-react';
 
 const statusCards = [
-  { label: 'Network Focus', value: 'CORS', note: 'Zimbabwe station health and integrity', color: '#ff8c00', icon: Radio },
+  { label: 'Network Focus', value: 'National', note: 'Zimbabwe station health and integrity', color: '#ff8c00', icon: Radio },
   { label: 'Space Weather', value: 'Africa', note: 'Kp, TEC, scintillation and alerts', color: '#22d3ee', icon: CloudSun },
-  { label: 'Operational View', value: 'Live + Demo', note: 'RINEX archive and telemetry modes', color: '#1D9E75', icon: Activity },
+  { label: 'Operational View', value: 'Global', note: 'RINEX archive and telemetry modes', color: '#1D9E75', icon: Activity },
 ];
 
 const dashboardLinks = [
@@ -31,6 +31,22 @@ const dashboardLinks = [
     desc: 'Review African space weather risk, ionospheric impacts, sector alerts, and monitoring centers.',
     icon: CloudSun,
     color: '#22d3ee',
+  },
+  {
+    id: 'ionosphere',
+    title: 'Ionospheric Conditions',
+    eyebrow: 'GNSS propagation',
+    desc: 'Monitor TEC, scintillation S4, RTK status, and positioning impact across ZimCORS stations.',
+    icon: Waves,
+    color: '#22d3ee',
+  },
+  {
+    id: 'observatory',
+    title: 'Astronomy Observatory',
+    eyebrow: 'Mazowe observatory',
+    desc: 'Tonight targets, telescope status, observation logs, and ZIMSAT pass predictions.',
+    icon: Telescope,
+    color: '#a78bfa',
   },
 ];
 
