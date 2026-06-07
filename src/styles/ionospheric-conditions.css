@@ -307,51 +307,16 @@
 /* ── TEC Map ── */
 .icm2-tec-map {
   position: relative;
-  height: 430px;
   border-radius: 8px;
   overflow: hidden;
-  background: #020d1a;
-  margin-top: 4px;
+  background: #020c1a;
+  margin-top: 6px;
 }
 
-.icm2-tec-heatmap {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 33% 50%, rgba(239,68,68,0.88)    0%, transparent 11%),
-    radial-gradient(ellipse at 46% 51%, rgba(249,115,22,0.82)   0%, transparent 18%),
-    radial-gradient(ellipse at 52% 48%, rgba(234,179,8,0.68)    0%, transparent 26%),
-    radial-gradient(ellipse at 56% 50%, rgba(34,197,94,0.52)    0%, transparent 36%),
-    radial-gradient(ellipse at 50% 50%, rgba(34,211,238,0.22)   0%, transparent 57%),
-    radial-gradient(ellipse at 50% 50%, rgba(59,130,246,0.12)   0%, transparent 76%),
-    linear-gradient(180deg, rgba(2,18,38,0.92) 0%, rgba(4,26,52,0.88) 100%);
-}
-
-.icm2-map-lat-labels {
-  position: absolute;
-  right: 8px;
-  top: 6%;
-  bottom: 18%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  color: rgba(255,255,255,0.35);
-  font-size: 0.56rem;
-  font-weight: 700;
-  pointer-events: none;
-}
-
-.icm2-map-lon-labels {
-  position: absolute;
-  left: 8%;
-  right: 6%;
-  bottom: 9px;
-  display: flex;
-  justify-content: space-between;
-  color: rgba(255,255,255,0.35);
-  font-size: 0.56rem;
-  font-weight: 700;
-  pointer-events: none;
+.icm2-tec-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .icm2-station-marker {
@@ -421,13 +386,12 @@
 
 /* Legend */
 .icm2-tec-legend {
-  position: absolute;
-  bottom: 10px;
-  left: 38px;
-  right: 8px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  padding: 7px 10px;
+  background: rgba(2,12,26,0.95);
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 .icm2-legend-item {

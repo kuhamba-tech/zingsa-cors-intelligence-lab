@@ -657,7 +657,710 @@
   .obs-catalog-grid    { grid-template-columns: 1fr 1fr; }
 }
 
+.obs-stellarium-source { color: #64748b; font-size: 0.62rem; }
+
+/* ── Stellarium Web embed ── */
+.obs-stellarium-section {
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(167,139,250,0.22);
+  background: linear-gradient(180deg, rgba(12,8,32,0.95), rgba(4,8,20,0.98));
+}
+
+.obs-stellarium-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.obs-stellarium-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #22c55e;
+  margin-bottom: 6px;
+}
+
+.obs-stellarium-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 900;
+  background: linear-gradient(90deg, #c4b5fd, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.obs-stellarium-sub {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.obs-stellarium-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.obs-stellarium-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(167,139,250,0.35);
+  background: rgba(167,139,250,0.1);
+  color: #e9d5ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.obs-stellarium-btn:disabled { opacity: 0.6; cursor: wait; }
+
+.obs-stellarium-note {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(34,211,238,0.08);
+  border: 1px solid rgba(34,211,238,0.22);
+  color: #a5f3fc;
+  font-size: 0.72rem;
+}
+
+.obs-stellarium-shell {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: #000;
+  min-height: 520px;
+}
+
+.obs-stellarium-frame {
+  width: 100%;
+  height: min(72vh, 680px);
+  min-height: 520px;
+  border: 0;
+  display: block;
+}
+
+.obs-stellarium-overlay {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  z-index: 2;
+}
+
+.obs-stellarium-overlay span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(3,7,18,0.78);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #cbd5e1;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.obs-stellarium-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.obs-stellarium-card {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.obs-stellarium-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #c4b5fd;
+  font-size: 0.78rem;
+}
+
+.obs-stellarium-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.obs-stellarium-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.obs-planet-symbol {
+  font-size: 1rem;
+  line-height: 1;
+  color: #22d3ee;
+}
+
+.obs-stellarium-list strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 0.76rem;
+}
+
+.obs-stellarium-list span {
+  display: block;
+  color: #64748b;
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
+
+.obs-stellarium-moon-phase {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #f8fafc;
+  margin-bottom: 8px;
+}
+
+.obs-stellarium-moon-meta {
+  display: grid;
+  gap: 4px;
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+.obs-stellarium-card-copy {
+  margin: 0 0 10px;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.obs-stellarium-link {
+  display: inline-block;
+  color: #22d3ee;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+  margin-bottom: 8px;
+}
+
+.obs-stellarium-api {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.35);
+  color: #64748b;
+  font-size: 0.62rem;
+}
+
+@media (max-width: 960px) {
+  .obs-stellarium-cards { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 480px) {
   .obs-top-cards    { grid-template-columns: 1fr; }
   .obs-catalog-grid { grid-template-columns: 1fr; }
+  .obs-stellarium-frame { min-height: 420px; height: 56vh; }
+}
+
+/* ── Telescope Simulator ── */
+.obs-telescope-section {
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(34,211,238,0.18);
+  background: linear-gradient(180deg, rgba(6,12,28,0.96), rgba(2,6,18,0.98));
+}
+
+.obs-telescope-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.obs-telescope-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #22d3ee;
+  margin-bottom: 6px;
+}
+
+.obs-telescope-title {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.2vw, 1.65rem);
+  font-weight: 900;
+  color: #f8fafc;
+}
+
+.obs-telescope-sub {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.obs-telescope-api {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #64748b;
+  font-size: 0.62rem;
+}
+
+.obs-telescope-note {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(34,211,238,0.08);
+  border: 1px solid rgba(34,211,238,0.22);
+  color: #a5f3fc;
+  font-size: 0.72rem;
+}
+
+.obs-telescope-note--error {
+  background: rgba(239,68,68,0.08);
+  border-color: rgba(239,68,68,0.25);
+  color: #fecaca;
+}
+
+.obs-telescope-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.obs-telescope-viewport-wrap {
+  min-height: 360px;
+}
+
+.obs-telescope-viewport {
+  position: relative;
+  height: 100%;
+  min-height: 360px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: radial-gradient(circle at 50% 45%, #0a1628 0%, #020617 55%, #000 100%);
+}
+
+.obs-telescope-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 42%, rgba(0,0,0,0.72) 100%);
+  z-index: 2;
+}
+
+.obs-telescope-star {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  z-index: 1;
+}
+
+.obs-telescope-object {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow, #38bdf8) 0%, rgba(56,189,248,0.35) 35%, transparent 72%);
+  filter: blur(1px);
+  transition: left 0.35s ease, top 0.35s ease, opacity 0.35s ease, transform 0.35s ease;
+  z-index: 1;
+}
+
+.obs-telescope-object.is-aligned {
+  filter: blur(0.5px);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--glow, #38bdf8) 55%, transparent);
+}
+
+.obs-telescope-reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #22c55e;
+  opacity: 0.92;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.obs-telescope-view-label {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(3,7,18,0.82);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  z-index: 3;
+}
+
+.obs-telescope-track-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(34,197,94,0.15);
+  border: 1px solid rgba(34,197,94,0.35);
+  color: #86efac;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  z-index: 3;
+}
+
+.obs-telescope-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.obs-telescope-field {
+  display: grid;
+  gap: 6px;
+}
+
+.obs-telescope-field span {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.obs-telescope-field select,
+.obs-telescope-field input[type="range"] {
+  width: 100%;
+}
+
+.obs-telescope-field select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(2,6,23,0.85);
+  color: #f8fafc;
+  font-size: 0.76rem;
+}
+
+.obs-telescope-field input[type="range"] {
+  accent-color: #22d3ee;
+}
+
+.obs-telescope-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.obs-telescope-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(15,23,42,0.85);
+  color: #e2e8f0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.obs-telescope-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.obs-telescope-info {
+  margin-top: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.28);
+}
+
+.obs-telescope-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.68rem;
+}
+
+.obs-telescope-info-row span { color: #64748b; }
+.obs-telescope-info-row strong { color: #f1f5f9; text-align: right; font-weight: 700; }
+
+.obs-telescope-ai {
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(167,139,250,0.08);
+  border: 1px solid rgba(167,139,250,0.2);
+  color: #ddd6fe;
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.obs-telescope-hint {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.obs-telescope-aligned {
+  margin: 6px 0 0;
+  color: #22c55e;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .obs-telescope-layout { grid-template-columns: 1fr; }
+}
+
+/* ── Night Sky Viewer ── */
+.obs-nightsky-section {
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(167,139,250,0.2);
+  background: linear-gradient(180deg, rgba(10,8,28,0.96), rgba(4,8,20,0.98));
+}
+
+.obs-nightsky-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.obs-nightsky-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #22c55e;
+  margin-bottom: 6px;
+}
+
+.obs-nightsky-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.3vw, 1.75rem);
+  font-weight: 900;
+  background: linear-gradient(90deg, #c4b5fd, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.obs-nightsky-sub {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.obs-nightsky-api {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #64748b;
+  font-size: 0.62rem;
+}
+
+.obs-nightsky-note {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(34,211,238,0.08);
+  border: 1px solid rgba(34,211,238,0.22);
+  color: #a5f3fc;
+  font-size: 0.72rem;
+}
+
+.obs-nightsky-note--error {
+  background: rgba(239,68,68,0.08);
+  border-color: rgba(239,68,68,0.25);
+  color: #fecaca;
+}
+
+.obs-nightsky-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.obs-nightsky-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.obs-nightsky-field {
+  display: grid;
+  gap: 6px;
+}
+
+.obs-nightsky-field span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.obs-nightsky-field input[type="date"],
+.obs-nightsky-field input[type="time"] {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(2,6,23,0.85);
+  color: #f8fafc;
+  font-size: 0.76rem;
+  color-scheme: dark;
+}
+
+.obs-nightsky-time-wrap {
+  display: grid;
+  gap: 4px;
+}
+
+.obs-nightsky-time-display {
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.obs-nightsky-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.obs-nightsky-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(167,139,250,0.35);
+  background: rgba(167,139,250,0.1);
+  color: #e9d5ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.obs-nightsky-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.obs-nightsky-teaching {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: #94a3b8;
+  font-size: 0.65rem;
+  line-height: 1.55;
+}
+
+.obs-nightsky-chart-panel {
+  min-height: 340px;
+}
+
+.obs-nightsky-chart {
+  position: relative;
+  height: 100%;
+  min-height: 340px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: radial-gradient(circle at 50% 40%, #0b1224 0%, #020617 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.obs-nightsky-svg {
+  width: min(100%, 360px);
+  aspect-ratio: 1;
+  display: block;
+}
+
+.obs-nightsky-cardinal {
+  fill: #64748b;
+  font-size: 3.2px;
+  font-weight: 800;
+}
+
+.obs-nightsky-chart-label {
+  margin-top: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(3,7,18,0.82);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.obs-nightsky-chart-meta {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 0.62rem;
+}
+
+@media (max-width: 960px) {
+  .obs-nightsky-layout { grid-template-columns: 1fr; }
 }

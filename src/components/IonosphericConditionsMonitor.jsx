@@ -117,9 +117,14 @@ const AFRICA_OUTLINE = [
   [21,-17],[27,-13],[33,-8],[36,-6],
 ];
 
+// Left margin reserved for the colorbar
+const CB = 44;
+
+// Map lon → x (accounting for colorbar margin), lat → y
 function llToCanvas(lat, lon, W, H) {
+  const mapW = W - CB;
   return [
-    (lon - MAP_LON_MIN) / (MAP_LON_MAX - MAP_LON_MIN) * W,
+    CB + (lon - MAP_LON_MIN) / (MAP_LON_MAX - MAP_LON_MIN) * mapW,
     (MAP_LAT_MAX - lat) / (MAP_LAT_MAX - MAP_LAT_MIN) * H,
   ];
 }
@@ -153,7 +158,6 @@ function getTECValue(lat, lon) {
   // Equatorial ionization anomaly: peak ~5°N, broad east-west band
   const mainPeak = 78 * Math.exp(-Math.pow(lat - 5, 2) / 220)
                      * Math.exp(-Math.pow(lon - 5, 2) / 3200);
-  // Wide baseline driven purely by latitude
   const baseline = 22 * Math.exp(-Math.pow(lat - 5, 2) / 600);
   return Math.min(80, Math.max(0, mainPeak + baseline));
 }
@@ -174,65 +178,103 @@ function TecMap() {
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
     const H = canvas.height;
+    const mapW = W - CB;
+    const PAD_B = 18; // bottom padding for lon labels
 
     // 1. Dark background
     ctx.fillStyle = '#020c1a';
     ctx.fillRect(0, 0, W, H);
 
-    // 2. TEC heatmap via ImageData (fast batch)
-    const img  = ctx.createImageData(W, H);
+    // 2. TEC heatmap in the map area only (x ≥ CB)
+    const img  = ctx.createImageData(mapW, H - PAD_B);
     const data = img.data;
-    for (let py = 0; py < H; py++) {
-      for (let px = 0; px < W; px++) {
-        const lat = MAP_LAT_MAX - (py / H) * (MAP_LAT_MAX - MAP_LAT_MIN);
-        const lon = MAP_LON_MIN + (px / W) * (MAP_LON_MAX - MAP_LON_MIN);
+    for (let py = 0; py < H - PAD_B; py++) {
+      for (let px = 0; px < mapW; px++) {
+        const lat = MAP_LAT_MAX - (py / (H - PAD_B)) * (MAP_LAT_MAX - MAP_LAT_MIN);
+        const lon = MAP_LON_MIN + (px / mapW) * (MAP_LON_MAX - MAP_LON_MIN);
         const [r, g, b] = tecToRGB(getTECValue(lat, lon));
-        const i = (py * W + px) * 4;
+        const i = (py * mapW + px) * 4;
         data[i] = r; data[i+1] = g; data[i+2] = b; data[i+3] = 230;
       }
     }
-    ctx.putImageData(img, 0, 0);
+    ctx.putImageData(img, CB, 0);
 
-    // 3. Lat/lon grid lines (dashed, subtle)
+    // 3. Colorbar (left side: x 4–20, full map height)
+    const cbTop = 10; const cbBot = H - PAD_B - 8;
+    const cbH   = cbBot - cbTop;
+    for (let py = cbTop; py < cbBot; py++) {
+      const tec = 80 * (1 - (py - cbTop) / cbH);
+      const [r, g, b] = tecToRGB(tec);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(4, py, 14, 1);
+    }
+    // Colorbar border
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(4, cbTop, 14, cbH);
+
+    // Colorbar labels
+    ctx.font      = 'bold 9px Inter,system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textAlign = 'left';
+    [80, 60, 40, 20, 0].forEach(val => {
+      const y = cbTop + (1 - val / 80) * cbH;
+      // tick
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillRect(18, y - 0.5, 4, 1);
+      // label
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillText(String(val), 24, y + 3.5);
+    });
+    // "TECU" label at top of colorbar
+    ctx.font = 'bold 8px Inter,system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText('TECU', 2, cbTop - 2);
+
+    // 4. Grid lines (dashed, in map area)
     ctx.setLineDash([2, 5]);
-    ctx.lineWidth = 0.6;
+    ctx.lineWidth = 0.5;
     [20, 0, -20].forEach(lat => {
-      const [, y] = llToCanvas(lat, 0, W, H);
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y);
-      ctx.strokeStyle = lat === 0 ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.13)';
+      const [, y] = llToCanvas(lat, MAP_LON_MIN, W, H);
+      if (y < 0 || y > H - PAD_B) return;
+      ctx.beginPath(); ctx.moveTo(CB, y); ctx.lineTo(W, y);
+      ctx.strokeStyle = lat === 0 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
       ctx.stroke();
     });
     [0, 20, 40].forEach(lon => {
       const [x] = llToCanvas(0, lon, W, H);
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H);
-      ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H - PAD_B);
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
       ctx.stroke();
     });
     ctx.setLineDash([]);
 
-    // 4. Africa continent outline
+    // 5. Africa continent outline
     ctx.beginPath();
     AFRICA_OUTLINE.forEach(([lat, lon], idx) => {
       const [x, y] = llToCanvas(lat, lon, W, H);
       if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.closePath();
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-    ctx.lineWidth   = 1.4;
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth   = 1.5;
     ctx.stroke();
 
-    // 5. Lat/lon text labels drawn on canvas
-    ctx.font      = 'bold 9px Inter,sans-serif';
+    // 6. Lat labels (right edge)
+    ctx.font      = 'bold 9px Inter,system-ui,sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.textAlign = 'right';
     [{ lat:20,label:'20°N'},{lat:0,label:'0°'},{lat:-20,label:'20°S'},{lat:-40,label:'40°S'}].forEach(({ lat, label }) => {
       const [, y] = llToCanvas(lat, MAP_LON_MIN, W, H);
-      ctx.fillText(label, W - 4, y + 3);
+      if (y < 0 || y > H - PAD_B) return;
+      ctx.fillText(label, W - 3, Math.min(y + 3, H - PAD_B - 2));
     });
+
+    // 7. Lon labels (bottom)
     ctx.textAlign = 'center';
     [{ lon:-20,label:'20°W'},{lon:0,label:'0°'},{lon:20,label:'20°E'},{lon:40,label:'40°E'},{lon:60,label:'60°E'}].forEach(({ lon, label }) => {
-      const [x] = llToCanvas(MAP_LAT_MIN, lon, W, H);
-      ctx.fillText(label, x, H - 3);
+      const [x] = llToCanvas(0, lon, W, H);
+      ctx.fillText(label, x, H - 4);
     });
   }, [layer]);
 
@@ -264,26 +306,14 @@ function TecMap() {
         </div>
       </div>
 
-      {/* Canvas map */}
+      {/* Canvas — colorbar is drawn inside the canvas on the left */}
       <div className="icm2-tec-map">
-        {/* Colorbar */}
-        <div className="icm2-tec-colorbar">
-          <div className="icm2-colorbar-labels top"><span>TECU</span></div>
-          <div className="icm2-colorbar-gradient" />
-          <div className="icm2-colorbar-labels">
-            <span>80</span><span>60</span><span>40</span><span>20</span><span>0</span>
-          </div>
-        </div>
-
-        {/* Heatmap canvas */}
         <canvas
           ref={canvasRef}
-          width={520}
-          height={480}
+          width={560}
+          height={460}
           className="icm2-tec-canvas"
         />
-
-        {/* Bottom legend */}
         <div className="icm2-tec-legend">
           {[
             { label: 'Low (0-10)',       color: '#003acc' },

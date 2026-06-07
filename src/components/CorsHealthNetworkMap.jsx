@@ -1,40 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { AFRICA_TILE_LAYERS, africaMapTileLayerProps } from './africaMapConfig.js';
 
-const MAP_LAYERS = {
-  satellite: {
-    label: 'Satellite',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles © Esri',
-    maxZoom: 19,
-  },
-  street: {
-    label: 'Street',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles © Esri · © OpenStreetMap',
-    maxZoom: 19,
-  },
-};
+const MAP_LAYER_ORDER = ['hybrid', 'satellite', 'street'];
 
 function MapTileLayer({ mapStyle }) {
   const map = useMap();
-  const layer = MAP_LAYERS[mapStyle] || MAP_LAYERS.satellite;
+  const tileProps = africaMapTileLayerProps(mapStyle);
 
   useEffect(() => {
     const t = setTimeout(() => map.invalidateSize(), 150);
     return () => clearTimeout(t);
   }, [map, mapStyle]);
 
-  return (
-    <TileLayer
-      key={mapStyle}
-      url={layer.url}
-      attribution={layer.attribution}
-      maxZoom={layer.maxZoom}
-      {...(layer.subdomains ? { subdomains: layer.subdomains } : {})}
-    />
-  );
+  return <TileLayer key={mapStyle} {...tileProps} />;
 }
 
 function stationMarkerColor(status) {
@@ -76,7 +56,7 @@ export default function CorsHealthNetworkMap({
   riskColor = '#1D9E75',
   mapTitle = 'CORS station network',
 }) {
-  const [mapStyle, setMapStyle] = useState('satellite');
+  const [mapStyle, setMapStyle] = useState('hybrid');
 
   const center = useMemo(() => {
     if (!stations.length) return [-19.0, 29.1];
@@ -149,7 +129,10 @@ export default function CorsHealthNetworkMap({
 
         <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 500, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
           <div style={{ display: 'flex', background: 'rgba(3,7,31,0.82)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 9, padding: 4, gap: 4 }}>
-            {Object.entries(MAP_LAYERS).map(([key, layer]) => (
+            {MAP_LAYER_ORDER.map(key => {
+              const layer = AFRICA_TILE_LAYERS[key];
+              if (!layer) return null;
+              return (
               <button
                 key={key}
                 type="button"
@@ -161,9 +144,10 @@ export default function CorsHealthNetworkMap({
                   fontSize: '0.64rem', fontWeight: 800, cursor: 'pointer',
                 }}
               >
-                {layer.label}
+                {layer.short}
               </button>
-            ))}
+              );
+            })}
           </div>
           <div style={{ background: `${riskColor}1e`, border: `1px solid ${riskColor}45`, borderRadius: 8, padding: '7px 11px', textAlign: 'center', backdropFilter: 'blur(8px)' }}>
             <div style={{ fontSize: '0.58rem', color: '#dbeafe', marginBottom: 2 }}>RISK LEVEL</div>
