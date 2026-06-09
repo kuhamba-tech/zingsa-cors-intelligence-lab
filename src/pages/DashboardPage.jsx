@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { BarChart3, CloudSun, Database, Radio, RefreshCw, ShieldCheck, Telescope, Waves } from 'lucide-react';
 import { fetchLiveKp, getDemoSpaceWeather } from '../services/spaceWeatherApi.js';
+import { getNtripStatus, getNtripMountpoints, getNtripAlerts } from '../services/ntripApi.js';
 import OperationalServicesNav, { OPERATIONAL_LINK_TARGETS } from '../components/OperationalServicesNav.jsx';
 import { useOpsHealth } from '../context/OpsHealthContext.jsx';
 import { healthTelemetryLabel, isSimulatedHealth } from '../utils/corsNetworkData.js';
@@ -67,6 +68,31 @@ export default function DashboardPage({ onNavigate }) {
     alertsPath,
   } = useOpsHealth();
 
+  const [ntripStatus,     setNtripStatus]     = useState(null);
+  const [ntripMounts,     setNtripMounts]     = useState([]);
+  const [ntripAlertCount, setNtripAlertCount] = useState(0);
+  const [ntripLoading,    setNtripLoading]    = useState(true);
+
+  const refreshNtrip = useCallback(async () => {
+    try {
+      const [st, mps, als] = await Promise.all([
+        getNtripStatus(),
+        getNtripMountpoints(),
+        getNtripAlerts(true),
+      ]);
+      setNtripStatus(st);
+      setNtripMounts(Array.isArray(mps) ? mps : []);
+      setNtripAlertCount(Array.isArray(als) ? als.length : 0);
+    } catch { /* keep stale */ }
+    finally { setNtripLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    refreshNtrip();
+    const id = setInterval(refreshNtrip, 30_000);
+    return () => clearInterval(id);
+  }, [refreshNtrip]);
+
   const [kp, setKp] = useState(null);
   const [kpMode, setKpMode] = useState('demo');
   const [kpUpdated, setKpUpdated] = useState(null);
@@ -110,30 +136,31 @@ export default function DashboardPage({ onNavigate }) {
     }
   };
 
-  const loadSnapshot = () => Promise.all([refreshHealth(), refreshKp()]);
+  const loadSnapshot = () => Promise.all([refreshHealth(), refreshKp(), refreshNtrip()]);
+
+  // ── NTRIP-derived ZimCORS stats ──────────────────────────────
+  const ntripTotal   = ntripStatus?.totalMountpoints  ?? ntripMounts.length;
+  const ntripOnline  = ntripStatus?.activeMountpoints ?? ntripMounts.filter(m => m.status?.connected).length;
+  const ntripOffline = ntripTotal - ntripOnline;
+  const ntripAvgLat  = ntripStatus?.averageLatencyMs;
+  const ntripHealth  = ntripStatus?.networkHealth ?? 'unknown';
+  const ntripHealthColor = ntripOffline === 0 ? '#1D9E75' : ntripOnline / Math.max(ntripTotal, 1) >= 0.8 ? '#EF9F27' : '#ef4444';
+  const useNtrip = !ntripLoading && ntripTotal > 0;
 
   const statusCards = [
     {
       label: 'ZimCORS Network',
-      value: loading ? '…' : `${healthStats.operational}/${totalStations} operational`,
-      note: healthPayload
-        ? `${hasActiveAlerts ? `${alertStats.count} active alert${alertStats.count === 1 ? '' : 's'} · ` : ''}${healthStats.online} online · ${healthStats.degraded} degraded · ${healthTelemetryLabel(healthPayload)}${
-          healthPayload.analysis_date
-            ? ` · health API ${new Date(healthPayload.analysis_date).toLocaleString('en-GB')}`
-            : ''
-        }`
-        : 'Zimbabwe station health and integrity',
-      color: healthPct == null ? '#ff8c00' : healthPct >= 80 ? '#1D9E75' : '#EF9F27',
+      value: ntripLoading ? '…' : useNtrip
+        ? `${ntripOnline}/${ntripTotal} operational`
+        : (loading ? '…' : `${healthStats.operational}/${totalStations} operational`),
+      note: useNtrip
+        ? `${ntripAlertCount > 0 ? `${ntripAlertCount} active alert${ntripAlertCount === 1 ? '' : 's'} · ` : ''}${ntripOnline} online · ${ntripOffline} offline · NTRIP ${ntripHealth}${ntripAvgLat ? ` · avg ${ntripAvgLat}ms latency` : ''}`
+        : (healthPayload
+            ? `${hasActiveAlerts ? `${alertStats.count} active alert${alertStats.count === 1 ? '' : 's'} · ` : ''}${healthStats.online} online · ${healthStats.degraded} degraded · ${healthTelemetryLabel(healthPayload)}`
+            : 'Zimbabwe station health and integrity'),
+      color: useNtrip ? ntripHealthColor : (healthPct == null ? '#ff8c00' : healthPct >= 80 ? '#1D9E75' : '#EF9F27'),
       icon: Radio,
-      action: () => {
-        if (!healthLoading && healthPayload && hasStationIssues) {
-          onNavigate?.('alerts', '/alerts?tab=stations');
-        } else if (!healthLoading && healthPayload && hasActiveAlerts) {
-          onNavigate?.('alerts', '/alerts?tab=alerts');
-        } else {
-          openPage('cors');
-        }
-      },
+      action: () => openPage('cors'),
     },
     {
       label: 'RINEX Archive Index',
