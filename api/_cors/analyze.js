@@ -1,7 +1,4 @@
-import {
-  loadIndex, scanArchives, saveIndex,
-  findArchiveForQuery, ensureArchiveExtracted,
-} from '../../lib/corsDataIngest.js';
+import { loadIndex, findArchiveForQuery } from '../../lib/corsIndex.js';
 import { buildDemoMetricsFromArchive } from '../../lib/corsDemoAnalysis.js';
 
 function cors(res) {
@@ -21,15 +18,7 @@ export default async function handler(req, res) {
   const time = req.query?.time || '00:00';
   const sourceId = req.query?.source || null;
   const session = req.query?.session != null ? Number(req.query.session) : 0;
-  const extract = req.query?.extract !== 'false';
-
-  let index = loadIndex();
-  if (!index.archives?.length) {
-    const scan = scanArchives({ sourceId: sourceId || 'gnss-apps' });
-    index.archives = scan.archives;
-    index.sources = scan.sources;
-    saveIndex(index);
-  }
+  const index = loadIndex();
 
   let archive = findArchiveForQuery({ stationId, date, time, session, sourceId }, index);
 
@@ -48,28 +37,6 @@ export default async function handler(req, res) {
       message: `No data: no RINEX observation file is indexed for ${stationId}${date ? ` on ${date}` : ''}. Dates are read from the RINEX observation header/filename, not folder modified dates.`,
       metrics,
     });
-  }
-
-  if (extract) {
-    try {
-      archive = ensureArchiveExtracted(archive, index);
-      index = loadIndex();
-    } catch (err) {
-      const metrics = buildDemoMetricsFromArchive({
-        archive: { ...archive, header: archive.header || null },
-        regionId,
-        stationId,
-        date: date || archive.date,
-        time,
-      });
-      return res.status(200).json({
-        success: true,
-        mode: 'demo',
-        hasArchive: true,
-        warning: `Archive found but extract failed: ${err.message}`,
-        metrics,
-      });
-    }
   }
 
   const metrics = buildDemoMetricsFromArchive({

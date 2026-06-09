@@ -1,4 +1,4 @@
-import { loadIndex, scanArchives, saveIndex } from '../../lib/corsDataIngest.js';
+import { loadIndex } from '../../lib/corsIndex.js';
 import { DATA_SOURCES } from '../../lib/corsApiConfig.js';
 
 function cors(res) {
@@ -15,29 +15,7 @@ export default async function handler(req, res) {
   const stationId = req.query?.station;
   const sourceId = req.query?.source || null;
   const refresh = req.query?.refresh === '1' || req.query?.refresh === 'true';
-
-  let index = loadIndex();
-  if (refresh) {
-    const scan = scanArchives({ sourceId });
-    const byId = new Map((index.archives || []).map(a => [a.id, a]));
-    for (const a of scan.archives) {
-      if (!byId.has(a.id)) byId.set(a.id, { ...a, extracted: false });
-    }
-    index = {
-      ...index,
-      sources: scan.sources,
-      archives: [...byId.values()],
-      updatedAt: new Date().toISOString(),
-    };
-    saveIndex(index);
-  }
-
-  if (!index.archives?.length) {
-    const scan = scanArchives({ sourceId });
-    index.archives = scan.archives;
-    index.sources = scan.sources;
-    saveIndex(index);
-  }
+  const index = loadIndex();
 
   let archives = index.archives || [];
   if (sourceId) archives = archives.filter(a => a.sourceId === sourceId);
@@ -54,6 +32,8 @@ export default async function handler(req, res) {
     success: true,
     mode: 'demo',
     provider: 'ZINGSA CORS Data API',
+    refreshDisabled: refresh,
+    message: refresh ? 'Production catalogue uses the committed compact index. Run local ingest to refresh data/cors-index.json.' : undefined,
     configuredSources: DATA_SOURCES,
     sources: index.sources || [],
     sourceCounts: bySource,

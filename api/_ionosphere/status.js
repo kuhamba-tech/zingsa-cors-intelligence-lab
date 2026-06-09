@@ -1,5 +1,5 @@
 import { ZIMBABWE_CORS_STATIONS } from '../../src/data/zimbabweCorsStations.js';
-import { loadIndex, findArchiveForQuery } from '../../lib/corsDataIngest.js';
+import { loadIndex, findArchiveForQuery } from '../../lib/corsIndex.js';
 import { buildDemoMetricsFromArchive } from '../../lib/corsDemoAnalysis.js';
 
 const NOAA_KP_URL = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json';
