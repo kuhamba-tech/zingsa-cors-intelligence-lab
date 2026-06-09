@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from
 import { BarChart3, CloudSun, Radio, AlertTriangle, Waves, Telescope } from 'lucide-react';
 import { OPERATIONAL_LINK_TARGETS } from './components/OperationalServicesNav.jsx';
 import { OpsHealthProvider, useOpsHealth } from './context/OpsHealthContext.jsx';
+import TranslateSwitcher from './components/TranslateSwitcher.jsx';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
 const AfricanCORSIntelligenceLabPage = lazy(() => import('./pages/AfricanCORSIntelligenceLabPage.jsx'));
@@ -141,12 +142,7 @@ function AppShell() {
                 id === 'alerts' ? 'rgba(239,68,68,0.4)' :
                 'rgba(255,140,0,0.4)'
               ) : 'rgba(255,255,255,0.08)'}`,
-              color: active === id ? (
-                id === 'weather' || id === 'ionosphere' ? '#22d3ee' :
-                id === 'dashboard' || id === 'observatory' ? '#a78bfa' :
-                id === 'alerts' ? '#ef4444' :
-                '#ff8c00'
-              ) : '#94a3b8',
+              color: active === id ? (id === 'alerts' ? '#ef4444' : '#22d3ee') : '#94a3b8',
             }}
           >
             <Icon size={16} />
@@ -168,7 +164,7 @@ function AppShell() {
                   textAlign: 'center',
                 }}
               >
-                {badgeCount > 9 ? '9+' : badgeCount}
+                {badgeCount}
               </span>
             )}
           </button>
@@ -204,6 +200,7 @@ export default function App() {
     <BrowserRouter>
       <OpsHealthProvider>
         <AppShell />
+        <TranslateSwitcher />
       </OpsHealthProvider>
     </BrowserRouter>
   );

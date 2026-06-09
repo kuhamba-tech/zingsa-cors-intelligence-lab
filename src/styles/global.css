@@ -1,5 +1,16 @@
 *, *::before, *::after { box-sizing: border-box; }
 
+:root {
+  --site-text-primary: #f8fafc;
+  --site-text-body: #a7b3c9;
+  --site-text-muted: #94a3b8;
+  --site-text-subtle: #64748b;
+  --site-accent: #22d3ee;
+  --site-accent-soft: #67e8f9;
+  --site-accent-bg: rgba(34, 211, 238, 0.1);
+  --site-accent-border: rgba(34, 211, 238, 0.32);
+}
+
 html {
   font-size: 18px;
 }
@@ -10,7 +21,7 @@ html, body, #root {
   min-height: 100%;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: #03071f;
-  color: #e2e8f0;
+  color: var(--site-text-body);
 }
 
 button, select, input { font-family: inherit; }
@@ -246,6 +257,11 @@ button, select, input { font-family: inherit; }
   display: flex;
   gap: 14px;
   padding: 18px;
+  min-width: 0;
+}
+
+.dashboard-status-card > div:last-child {
+  min-width: 0;
 }
 
 .dashboard-card-icon,
@@ -266,6 +282,8 @@ button, select, input { font-family: inherit; }
   margin: 5px 0;
   color: var(--accent);
   font-size: 1.25rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .dashboard-status-card p,
@@ -273,6 +291,8 @@ button, select, input { font-family: inherit; }
   margin: 0;
   color: #94a3b8;
   line-height: 1.6;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .dashboard-link-grid {
@@ -390,4 +410,261 @@ button, select, input { font-family: inherit; }
   .dashboard-hero-status {
     width: 100%;
   }
+}
+
+/* Site-wide typography palette inspired by the Space Weather hero. */
+body :is(
+  .dashboard-page,
+  .sw-page,
+  .cil-page,
+  .cas-page,
+  .icm2-root,
+  .obs-root,
+  .ntrip-root,
+  .gnss-panel
+) {
+  color: var(--site-text-body);
+}
+
+body :is(
+  .dashboard-page,
+  .sw-page,
+  .cil-page,
+  .cas-page,
+  .icm2-root,
+  .obs-root,
+  .ntrip-root,
+  .gnss-panel
+) :is(h1, h2, h3, h4, h5, h6, .dashboard-link-card h2, .dashboard-status-card strong, .dashboard-hero-status strong, .cil-header-title, .cil-national-title, .cil-section-title, .cil-analysis-title, .cas-tab-title, .obs-title, .obs-clock-card strong, .obs-stellarium-title, .obs-telescope-title, .icm2-title, .icm2-panel-title, .gnss-panel__title, .sw-page-summary-title, .sw-enh-panel-title) {
+  color: var(--site-text-primary) !important;
+}
+
+body :is(
+  .dashboard-page,
+  .sw-page,
+  .cil-page,
+  .cas-page,
+  .icm2-root,
+  .obs-root,
+  .ntrip-root,
+  .gnss-panel
+) :is(p, li, small, td, .dashboard-status-card p, .dashboard-link-card p, .dashboard-hero p, .cil-national-copy, .cil-analysis-copy, .cil-summary, .cas-subtitle, .obs-subtitle, .obs-clock-card small, .obs-stellarium-sub, .obs-telescope-sub, .icm2-subtitle, .gnss-panel__subtitle, .sw-page-summary p) {
+  color: var(--site-text-body) !important;
+}
+
+body :is(
+  .dashboard-page,
+  .sw-page,
+  .cil-page,
+  .cas-page,
+  .icm2-root,
+  .obs-root,
+  .ntrip-root,
+  .gnss-panel
+) :is(.dashboard-hero-status span, .dashboard-status-card span, .dashboard-link-head span, .cil-breadcrumb, .cil-app-tab-desc, .cil-controls label, .cil-metric-row .row-label, .cil-national-stat span, .cas-stat-label, .cas-popup-row span:first-child, .obs-site-pill span, .obs-clock-card span, .obs-meta-item, .icm2-card-kicker, .icm2-card-title, .gnss-panel__eyebrow) {
+  color: var(--site-text-muted) !important;
+}
+
+body :is(
+  .dashboard-kicker,
+  .dashboard-card-icon,
+  .dashboard-link-icon,
+  .dashboard-link-card button,
+  .ops-nav-link,
+  .cil-header-nav-btn,
+  .cil-national-kicker,
+  .cil-national-link,
+  .cil-fullpage-banner-link,
+  .cil-quality-actions button,
+  .cil-quality-link,
+  .cil-service-link-btn,
+  .cil-analysis-kicker,
+  .cas-action-btn.monitor,
+  .obs-kicker,
+  .obs-header-icon,
+  .obs-stellarium-kicker,
+  .obs-telescope-kicker,
+  .obs-stellarium-btn,
+  .icm2-cors-link,
+  .sw-page-summary-kicker
+) {
+  color: var(--site-accent) !important;
+}
+
+body :is(.ops-nav--purple .ops-nav-link, .ops-nav--orange .ops-nav-link, .ops-nav--cyan .ops-nav-link) {
+  border-color: var(--site-accent-border) !important;
+  background: var(--site-accent-bg) !important;
+  color: var(--site-accent) !important;
+}
+
+body :is(.ops-nav--purple .ops-nav-link:hover, .ops-nav--orange .ops-nav-link:hover, .ops-nav--cyan .ops-nav-link:hover) {
+  background: rgba(34, 211, 238, 0.16) !important;
+  color: var(--site-accent-soft) !important;
+}
+
+/* ── TranslateSwitcher ── */
+.ts-root {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  font-family: Inter, sans-serif;
+}
+
+.ts-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(34, 211, 238, 0.30);
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transition: border-color 0.15s, background 0.15s;
+}
+.ts-trigger:hover, .ts-trigger.open {
+  border-color: rgba(34, 211, 238, 0.65);
+  background: rgba(15, 23, 42, 0.98);
+}
+.ts-trigger-flag {
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+.ts-trigger-code {
+  color: #22d3ee;
+  letter-spacing: 0.5px;
+}
+.ts-trigger-caret {
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+.ts-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  width: 300px;
+  max-height: 480px;
+  overflow-y: auto;
+  background: rgba(10, 18, 36, 0.97);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  backdrop-filter: blur(12px);
+  padding-bottom: 8px;
+}
+.ts-panel::-webkit-scrollbar { width: 4px; }
+.ts-panel::-webkit-scrollbar-track { background: transparent; }
+.ts-panel::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.2); border-radius: 2px; }
+
+.ts-panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ts-panel-icon {
+  font-size: 1.1rem;
+  color: #22d3ee;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.ts-panel-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.ts-panel-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.ts-section-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #475569;
+  padding: 10px 16px 4px;
+  text-transform: uppercase;
+}
+
+.ts-lang-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+.ts-lang-row:hover:not(.unavailable) {
+  background: rgba(34, 211, 238, 0.07);
+}
+.ts-lang-row.active {
+  background: rgba(34, 211, 238, 0.10);
+}
+.ts-lang-row.unavailable {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ts-flag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 4px;
+  padding: 2px 5px;
+  min-width: 30px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ts-lang-names {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ts-lang-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+.ts-lang-native {
+  font-size: 0.70rem;
+  color: #64748b;
+}
+.ts-lang-unavail {
+  font-size: 0.63rem;
+  color: #475569;
+  font-style: italic;
+}
+
+.ts-check {
+  font-size: 0.85rem;
+  color: #22d3ee;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ts-loading {
+  font-size: 0.72rem;
+  color: #475569;
+  padding: 10px 16px;
+  text-align: center;
 }

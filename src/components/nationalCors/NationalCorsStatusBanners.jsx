@@ -25,18 +25,6 @@ export default function NationalCorsStatusBanners({
         </div>
       )}
 
-      {liveMode && isSimulatedHealth(healthPayload) && (
-        <div className="cil-alert-bar" style={{ background: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.35)', color: '#fde68a' }}>
-          <strong style={{ color: '#eab308' }}>Telemetry note:</strong>
-          <span>
-            {healthTelemetryLabel(healthPayload)} via <strong>GET /api/gnss/station-health</strong>.
-            {healthPayload?.index_updated_at && <> RINEX index updated {new Date(healthPayload.index_updated_at).toLocaleString('en-GB')}.</>}
-            {healthPayload?.telemetry_fetch_error && <> Telemetry URL unreachable: {healthPayload.telemetry_fetch_error}.</>}
-            {' '}Run <code>npm run cors:scan-gnss</code> after adding Spider archives to refresh coverage.
-          </span>
-        </div>
-      )}
-
       {liveError && (
         <div className="cil-alert-bar"><strong>{liveError.type}:</strong><span>{liveError.message}</span></div>
       )}

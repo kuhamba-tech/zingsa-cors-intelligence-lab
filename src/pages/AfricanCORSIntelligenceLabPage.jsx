@@ -23,8 +23,6 @@ export default function AfricanCORSIntelligenceLabPage() {
         gnssRefreshing={lab.gnssRefreshing}
       />
 
-      <OperationalServicesNav variant="orange" stationId={lab.stationId} />
-
       <div className="cil-breadcrumb">
         ZimCORS national network <span>›</span> Select station and application <span>›</span> Run analysis
       </div>

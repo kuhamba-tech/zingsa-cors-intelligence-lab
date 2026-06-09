@@ -19,7 +19,6 @@ function buildGnssIntegrity(metrics, station, regionLabel, date) {
   const streamOnline = hasData && availability >= 70;
   const nominal = hasData && quality >= 80 && streamOnline;
   const stationName = station?.name?.split(' (')[0] || metrics?.archive?.stationId || 'Selected station';
-
   return {
     hasData,
     nominal,
@@ -38,7 +37,29 @@ function buildGnssIntegrity(metrics, station, regionLabel, date) {
     streamOnline,
     signalSpark: metrics?.qualSpark?.length ? metrics.qualSpark : [72, 84, 76, 82, 74, 70, 79, 72, 77, 86, 69, 78, 74, 79],
     positionSpark: metrics?.stabSpark?.length ? metrics.stabSpark : [72, 74, 70, 86, 73, 74, 72, 88, 78, 90, 86, 86, 82, 85],
+    signalPerformance: [
+      { name: 'GPS', color: '#22c55e', frequencies: [{ label: 'L1', level: 'LOW' }, { label: 'L2', level: 'LOW' }, { label: 'L5', level: 'LOW' }] },
+      { name: 'GLONASS', color: '#a855f7', frequencies: [{ label: 'L1', level: 'LOW' }, { label: 'L2', level: 'LOW' }] },
+      { name: 'Galileo', color: '#22d3ee', frequencies: [{ label: 'E1', level: 'LOW' }, { label: 'E5a', level: 'LOW' }, { label: 'E5b', level: 'LOW' }, { label: 'E5ab', level: 'LOW' }] },
+      { name: 'BeiDou', color: '#f97316', frequencies: [{ label: 'B1', level: 'LOW' }, { label: 'B2', level: integrityLevelFromQuality(quality) }, { label: 'B3', level: 'LOW' }] },
+    ],
   };
+}
+
+function integrityLevelFromQuality(quality) {
+  if (quality < 70) return 'HIGH';
+  if (quality < 85) return 'MODERATE';
+  return 'LOW';
+}
+
+function signalLevelColor(level) {
+  if (level === 'HIGH') return '#f97316';
+  if (level === 'MODERATE') return '#eab308';
+  return '#22c55e';
+}
+
+function SignalDot({ level }) {
+  return <span className="cil-gnss-signal-dot" style={{ background: signalLevelColor(level) }} title={level} />;
 }
 
 export default function GnssIntegrityPanel({ metrics, station, regionLabel, date }) {
@@ -121,6 +142,43 @@ export default function GnssIntegrityPanel({ metrics, station, regionLabel, date
             <div><small>{label}</small><strong>{value}</strong></div>
           </div>
         ))}
+      </div>
+
+      <div className="cil-gnss-signal-performance">
+        <div className="cil-gnss-signal-title">GNSS Signal Performance</div>
+        <table className="cil-gnss-signal-table">
+          <thead>
+            <tr>
+              <th>System</th>
+              <th>Frequency Tracked</th>
+            </tr>
+          </thead>
+          <tbody>
+            {integrity.signalPerformance.map(row => (
+              <tr key={row.name}>
+                <td>
+                  <span className="cil-gnss-const-dot" style={{ background: row.color }} />
+                  <span>{row.name}</span>
+                </td>
+                <td>
+                  <div className="cil-gnss-frequency-list">
+                    {row.frequencies.map(freq => (
+                      <span key={freq.label} className="cil-gnss-frequency-chip">
+                        <SignalDot level={freq.level} />
+                        {freq.label}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="cil-gnss-signal-legend">
+          {[['#22c55e', 'Low'], ['#eab308', 'Moderate'], ['#f97316', 'High']].map(([color, label]) => (
+            <span key={label}><i style={{ background: color }} />{label}</span>
+          ))}
+        </div>
       </div>
 
       <div className="cil-gnss-summary">

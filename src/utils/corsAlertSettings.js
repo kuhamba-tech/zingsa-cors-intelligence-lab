@@ -11,7 +11,8 @@ export const DEFAULT_NOTIFICATION_PREFS = {
   email: true,
   sms: false,
   whatsapp: true,
-  webhook: false,
+  sound: true,
+  eventlog: true,
 };
 
 const STORAGE_KEY = 'zingsa-cors-alert-settings';

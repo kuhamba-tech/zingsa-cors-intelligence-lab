@@ -5,6 +5,27 @@ import { AFRICA_TILE_LAYERS, africaMapTileLayerProps } from './africaMapConfig.j
 import { healthBasisLabel } from '../utils/corsNetworkData.js';
 
 const MAP_LAYER_ORDER = ['hybrid', 'satellite', 'street'];
+const ZIMBABWE_DEFAULT_VIEW = { center: [-18.85, 29.75], zoom: 6 };
+const FALLBACK_DEFAULT_VIEW = { center: [-19.0, 29.1], zoom: 5 };
+
+function readStoredMapView(storageKey, fallback) {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(storageKey) || 'null');
+    if (
+      parsed
+      && Array.isArray(parsed.center)
+      && parsed.center.length === 2
+      && parsed.center.every(Number.isFinite)
+      && Number.isFinite(parsed.zoom)
+    ) {
+      return parsed;
+    }
+  } catch {
+    /* ignore bad saved state */
+  }
+  return fallback;
+}
 
 function MapTileLayer({ mapStyle }) {
   const map = useMap();
@@ -32,11 +53,27 @@ function statusLabel(status) {
   return 'ONLINE';
 }
 
-function MapFocus({ center, zoom }) {
+function MapViewPersistence({ storageKey }) {
   const map = useMap();
   useEffect(() => {
-    map.flyTo(center, zoom, { duration: 0.8 });
-  }, [map, center, zoom]);
+    const saveView = () => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify({
+          center: [+center.lat.toFixed(5), +center.lng.toFixed(5)],
+          zoom,
+        }));
+      } catch {
+        /* ignore storage errors */
+      }
+    };
+
+    map.on('moveend zoomend', saveView);
+    return () => {
+      map.off('moveend zoomend', saveView);
+    };
+  }, [map, storageKey]);
   return null;
 }
 
@@ -76,15 +113,16 @@ export default function CorsHealthNetworkMap({
     [stations, selectedStationId],
   );
 
-  const center = useMemo(() => {
-    if (country === 'Zimbabwe') return [-18.9, 30.1];
-    if (!stations.length) return [-19.0, 29.1];
+  const defaultView = useMemo(() => {
+    if (country === 'Zimbabwe') return ZIMBABWE_DEFAULT_VIEW;
+    if (!stations.length) return FALLBACK_DEFAULT_VIEW;
     const lat = stations.reduce((s, st) => s + st.lat, 0) / stations.length;
     const lon = stations.reduce((s, st) => s + st.lon, 0) / stations.length;
-    return [lat, lon];
+    return { center: [lat, lon], zoom: 5 };
   }, [country, stations]);
 
-  const zoom = country === 'Zimbabwe' ? 6 : 5;
+  const storageKey = `zingsa-cors-network-map-view-${String(country).toLowerCase().replace(/\s+/g, '-')}`;
+  const [initialView] = useState(() => readStoredMapView(storageKey, defaultView));
 
   const activeLayers = [
     'AFREF Reference Frame',
@@ -98,14 +136,13 @@ export default function CorsHealthNetworkMap({
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 380, background: 'linear-gradient(180deg,rgba(8,14,32,0.95),rgba(4,8,20,0.98))' }}>
       <div style={{ position: 'relative', flex: 1, minHeight: 320 }}>
         <MapContainer
-          key={`cors-map-${mapStyle}`}
-          center={center}
-          zoom={zoom}
+          center={initialView.center}
+          zoom={initialView.zoom}
           style={{ height: '100%', width: '100%', minHeight: 320, background: '#0a1628' }}
           scrollWheelZoom
         >
           <MapTileLayer mapStyle={mapStyle} />
-          <MapFocus center={center} zoom={zoom} />
+          <MapViewPersistence storageKey={storageKey} />
           {focusSelectedStation && selectedStation && <StationFocus station={selectedStation} />}
           <MapResizeFix />
           {stations.map(st => {

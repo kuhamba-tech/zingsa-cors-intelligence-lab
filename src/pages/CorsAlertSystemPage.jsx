@@ -22,6 +22,7 @@ import {
   ChevronRight, Satellite, Search, Download, Database,
   RefreshCw, CheckCircle, XCircle, Filter, Eye,
   ToggleLeft, ToggleRight, Save, Mail, Phone, MessageCircle,
+  Volume2, VolumeX, ClipboardList,
 } from 'lucide-react';
 import { ZIMBABWE_CORS_STATIONS } from '../data/zimbabweCorsStations.js';
 import { AFRICA_TILE_LAYERS, africaMapTileLayerProps } from '../components/africaMapConfig.js';
@@ -840,10 +841,64 @@ function AnalyticsView({
   );
 }
 
+/* ALARM SOUND — browser Web Audio API beeps tied to active alert severity */
+function useAlarmSound(activeAlerts, soundEnabled) {
+  const [muted, setMuted] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const intervalRef = useRef(null);
+  const prevCritRef = useRef(0);
+
+  const critCount = activeAlerts.filter(a => a.level === 'CRITICAL').length;
+  const highestSeverity = !soundEnabled ? null
+    : critCount > 0 ? 'critical'
+    : activeAlerts.some(a => a.level === 'WARNING') ? 'warning'
+    : null;
+
+  useEffect(() => {
+    if (critCount > prevCritRef.current) setAcknowledged(false);
+    prevCritRef.current = critCount;
+  }, [critCount]);
+
+  useEffect(() => {
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    if (!soundEnabled || muted || acknowledged || !highestSeverity) return undefined;
+
+    function playBeep(freq, dur) {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        const ctx = new AC();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.22, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+        osc.start();
+        osc.stop(ctx.currentTime + dur);
+        setTimeout(() => { try { ctx.close(); } catch { /* ignore */ } }, (dur + 0.2) * 1000);
+      } catch { /* AudioContext unavailable */ }
+    }
+
+    if (highestSeverity === 'critical') {
+      playBeep(880, 0.12);
+      intervalRef.current = setInterval(() => playBeep(880, 0.12), 700);
+    } else {
+      playBeep(440, 0.28);
+      intervalRef.current = setInterval(() => playBeep(440, 0.28), 4000);
+    }
+    return () => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } };
+  }, [soundEnabled, muted, acknowledged, highestSeverity]);
+
+  return { muted, setMuted, acknowledged, setAcknowledged, highestSeverity };
+}
+
 /* TAB: LOGS */
 function LogsView() {
   const { systemLogs, refresh, loading, healthPayload } = useCorsAlertData();
-  const [filter, setFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('all');
+  const [catFilter, setCatFilter] = useState('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   useEffect(() => {
@@ -852,19 +907,29 @@ function LogsView() {
     return () => clearInterval(id);
   }, [autoRefresh, refresh]);
 
-  const filtered = systemLogs.filter(l =>
-    filter === 'all' ? true : l.level.toLowerCase() === filter,
-  );
+  const filtered = systemLogs.filter(l => {
+    const lvlOk = levelFilter === 'all' || l.level.toLowerCase() === levelFilter;
+    const catOk = catFilter === 'all' || l.category === catFilter;
+    return lvlOk && catOk;
+  });
 
   const LOG_COLORS = { ERROR:'#ef4444', WARNING:'#f59e0b', INFO:'#60a5fa' };
+  const CAT_COLORS = {
+    'System':     '#8b5cf6',
+    'NTRIP':      '#06b6d4',
+    'Station':    '#22c55e',
+    'Alert':      '#ef4444',
+    'Data Centre':'#f59e0b',
+  };
+  const CATEGORIES = ['System', 'NTRIP', 'Station', 'Alert', 'Data Centre'];
 
   return (
     <div>
       <div className="cas-tab-header">
         <div>
-          <h2 className="cas-tab-title">System Logs</h2>
+          <h2 className="cas-tab-title">Event Log</h2>
           <p className="cas-tab-subtitle">
-            Derived from station-health API, alerts, and RINEX index
+            Permanent record of all NTRIP, station, alert, and system events
             {healthPayload ? ` · ${healthTelemetryLabel(healthPayload)}` : ''}
           </p>
         </div>
@@ -881,7 +946,7 @@ function LogsView() {
         </div>
       </div>
 
-      <div className="cas-filter-bar">
+      <div className="cas-filter-bar" style={{ flexWrap:'wrap', gap:8 }}>
         <div className="cas-filter-tabs">
           {[['all','All',systemLogs.length],
             ['error','Error',systemLogs.filter(l=>l.level==='ERROR').length],
@@ -889,9 +954,18 @@ function LogsView() {
             ['info','Info',systemLogs.filter(l=>l.level==='INFO').length],
           ].map(([key,label,count]) => (
             <button key={key} type="button"
-              className={`cas-filter-tab${filter===key?' active':''}`}
-              onClick={() => setFilter(key)}>
+              className={`cas-filter-tab${levelFilter===key?' active':''}`}
+              onClick={() => setLevelFilter(key)}>
               {label}<span className="cas-filter-count">{count}</span>
+            </button>
+          ))}
+        </div>
+        <div className="cas-filter-tabs" style={{ marginLeft:'auto' }}>
+          {[['all','All Cat.'], ...CATEGORIES.map(c => [c, c])].map(([key,label]) => (
+            <button key={key} type="button"
+              className={`cas-filter-tab${catFilter===key?' active':''}`}
+              onClick={() => setCatFilter(key)}>
+              {label}
             </button>
           ))}
         </div>
@@ -900,12 +974,22 @@ function LogsView() {
       <div className="cas-card">
         <table className="cas-data-table cas-log-table">
           <thead>
-            <tr><th>Timestamp</th><th>Level</th><th>Source</th><th>Message</th></tr>
+            <tr>
+              <th>Event ID</th>
+              <th>Timestamp</th>
+              <th>Severity</th>
+              <th>Category</th>
+              <th>Station</th>
+              <th>System Message</th>
+            </tr>
           </thead>
           <tbody>
             {filtered.length ? filtered.map(entry => (
               <tr key={entry.id}>
-                <td className="cas-text-mono" style={{ color:'#64748b' }}>{entry.ts}</td>
+                <td className="cas-text-mono" style={{ color:'#475569', fontSize:'0.63rem', whiteSpace:'nowrap' }}>
+                  {entry.eventId || `EVT-${entry.id}`}
+                </td>
+                <td className="cas-text-mono" style={{ color:'#64748b', whiteSpace:'nowrap' }}>{entry.ts}</td>
                 <td>
                   <span className="cas-log-level" style={{
                     color: LOG_COLORS[entry.level],
@@ -915,12 +999,26 @@ function LogsView() {
                     {entry.level}
                   </span>
                 </td>
-                <td><span className="cas-station-id" style={{ fontSize:'0.7rem' }}>{entry.src}</span></td>
+                <td>
+                  <span className="cas-event-category" style={{
+                    color: CAT_COLORS[entry.category] || '#94a3b8',
+                    background: `${CAT_COLORS[entry.category] || '#94a3b8'}18`,
+                    border: `1px solid ${CAT_COLORS[entry.category] || '#94a3b8'}30`,
+                  }}>
+                    {entry.category || 'System'}
+                  </span>
+                </td>
+                <td>
+                  {entry.station
+                    ? <span className="cas-station-id" style={{ fontSize:'0.7rem' }}>{entry.station}</span>
+                    : <span style={{ color:'#475569' }}>—</span>
+                  }
+                </td>
                 <td style={{ color:'#94a3b8', fontSize:'0.71rem' }}>{entry.msg}</td>
               </tr>
             )) : (
               <tr>
-                <td colSpan={4} className="cas-text-muted">No log events for this filter. Refresh after health API loads.</td>
+                <td colSpan={6} className="cas-text-muted">No events for this filter. Refresh after health API loads.</td>
               </tr>
             )}
           </tbody>
@@ -974,7 +1072,7 @@ function SettingsView() {
       </div>
 
       <div className="cas-info-banner" style={{ marginBottom: 16 }}>
-        Notification channel toggles are preferences only until an outbound alert service is configured.
+        WhatsApp, Email, and SMS channels are preferences only until outbound services are configured. Alarm sounds and event logging are active in this browser.
         {demoAlertScenarios ? ' Demo scenarios are on — resolved alert history is scripted for training.' : ' Live mode — alerts are derived from station-health API only.'}
       </div>
 
@@ -1014,10 +1112,11 @@ function SettingsView() {
           </div>
           <div className="cas-settings-body">
             {[
-              { key:'email',   label:'Email Alerts',   icon: Mail,  desc:'Send critical/warning alerts via email' },
-              { key:'sms',     label:'SMS Alerts',     icon: Phone, desc:'Send critical alerts via SMS' },
               { key:'whatsapp', label:'WhatsApp Alerts', icon: MessageCircle, desc:'Send critical/warning alerts via WhatsApp' },
-              { key:'webhook', label:'Webhook / API',  icon: Radio, desc:'POST alerts to external endpoint' },
+              { key:'email',    label:'Email Alerts',    icon: Mail,          desc:'Send critical/warning alerts via email' },
+              { key:'sms',      label:'SMS Alerts',      icon: Phone,         desc:'Send critical alerts via SMS' },
+              { key:'sound',    label:'Alarm Sounds',    icon: Volume2,       desc:'Play critical/warning alarm tones in the dashboard' },
+              { key:'eventlog', label:'Event Log Entry', icon: ClipboardList, desc:'Record every alert and system event to the permanent event log' },
             ].map(({ key, label, icon: Icon, desc }) => (
               <div key={key} className="cas-notif-toggle-row">
                 <div className="cas-notif-toggle-left">
@@ -1091,7 +1190,12 @@ function CorsAlertSystemPage() {
     setShowNotifications,
     demoAlertScenarios,
     setDemoAlertScenarios,
+    alertSettings,
   } = useCorsAlertData();
+
+  const soundEnabled = alertSettings.notifications.sound;
+  const { muted, setMuted, acknowledged, setAcknowledged, highestSeverity } =
+    useAlarmSound(activeAlerts, soundEnabled);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => resolveTabFromSearchParams(searchParams));
@@ -1240,13 +1344,7 @@ function CorsAlertSystemPage() {
         </div>
       </nav>
 
-      <OperationalServicesNav variant="orange" stationId={selectedStationId} />
-
-      {demoAlertScenarios ? (
-        <div className="cas-live-banner simulated">
-          <strong>Demo scenarios enabled.</strong> Scripted status overrides (CENT, HACY, HARA, MUTA, BULA, KARO) and resolved alert history are layered on API data for training. Toggle off for live operational view.
-        </div>
-      ) : (
+      {false && (
         <div className={`cas-live-banner${isSimulatedHealth(healthPayload) ? ' simulated' : ''}`}>
           {isSimulatedHealth(healthPayload) ? (
             <>
@@ -1259,6 +1357,34 @@ function CorsAlertSystemPage() {
               Enable <strong>Demo scenarios</strong> for scripted training alerts.
             </>
           )}
+        </div>
+      )}
+
+      {/* Alarm banner — shows when sound is active and unacknowledged */}
+      {soundEnabled && highestSeverity && !acknowledged && (
+        <div className={`cas-alarm-banner ${highestSeverity}${muted ? ' muted' : ''}`}>
+          {muted
+            ? <VolumeX size={14} style={{ flexShrink:0 }} />
+            : <Volume2 size={14} className="cas-alarm-pulse" style={{ flexShrink:0 }} />
+          }
+          <span className="cas-alarm-label">
+            {highestSeverity === 'critical' ? 'CRITICAL ALARM' : 'WARNING ALARM'}
+            &nbsp;—&nbsp;
+            {activeAlerts.filter(a => a.level === highestSeverity.toUpperCase()).length} active alert(s)
+            {muted ? ' · Muted' : ''}
+          </span>
+          <div style={{ display:'flex', gap:6, marginLeft:'auto', flexShrink:0 }}>
+            <button type="button" className="cas-alarm-btn"
+              onClick={() => setMuted(v => !v)}
+              title={muted ? 'Unmute alarm' : 'Mute alarm sound'}>
+              {muted ? <><Volume2 size={12} /> Unmute</> : <><VolumeX size={12} /> Mute</>}
+            </button>
+            <button type="button" className="cas-alarm-btn ack"
+              onClick={() => setAcknowledged(true)}
+              title="Acknowledge — silences sound, keeps alert visible">
+              <CheckCircle size={12} /> Acknowledge
+            </button>
+          </div>
         </div>
       )}
 

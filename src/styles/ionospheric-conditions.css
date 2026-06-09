@@ -1152,6 +1152,34 @@
   flex-shrink: 0;
 }
 
+.icm2-signal-index {
+  display: inline-block;
+  min-width: 2.4ch;
+  margin-right: 12px;
+  color: #a7b3c9;
+  text-align: right;
+}
+
+.icm2-signal-table td:last-child {
+  color: #f8fafc;
+}
+
+.icm2-frequency-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.icm2-frequency-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 58px;
+  color: #a7b3c9;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .icm2-freq-legend {
   display: flex;
   gap: 10px;

@@ -240,6 +240,7 @@
 /* ── Content ── */
 .obs-content {
   padding: 12px 18px 40px;
+  scroll-margin-top: 88px;
 }
 
 /* ══════════════════════════════════════════

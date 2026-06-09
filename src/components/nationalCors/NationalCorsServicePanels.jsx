@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ZIMCORS_SERVICE } from '../../data/corsIntelligenceLabData.js';
 import { ZIMBABWE_CORS_STATIONS } from '../../data/zimbabweCorsStations.js';
-import { healthTelemetryLabel, isSimulatedHealth } from '../../utils/corsNetworkData.js';
+import { healthTelemetryLabel, isSimulatedHealth, summarizeZimHealth } from '../../utils/corsNetworkData.js';
 import { OPERATIONAL_LINK_TARGETS } from '../OperationalServicesNav.jsx';
 
 export function DedicatedMonitorBanner({ appView, stationId }) {
@@ -28,10 +28,12 @@ export function NationalServiceHero({
   regionId, metrics, healthPayload, liveMode, loading, copyShareLink, shareCopied,
 }) {
   if (regionId !== 'zimbabwe' || !metrics) return null;
-  const total = ZIMBABWE_CORS_STATIONS.length;
+  const zimIds = ZIMBABWE_CORS_STATIONS.map(s => s.id);
+  const healthStats = summarizeZimHealth(healthPayload, zimIds);
+  const total = healthStats.total;
   const statusList = metrics.stationStatuses || [];
-  const onlineCount = statusList.filter(s => s.status === 'online').length;
-  const healthPct = statusList.length ? Math.round((onlineCount / statusList.length) * 100) : 0;
+  const onlineCount = healthPayload ? healthStats.online : statusList.filter(s => s.status === 'online').length;
+  const healthPct = total ? Math.round((onlineCount / total) * 100) : 0;
   const updated = healthPayload?.analysis_date
     ? `${new Date(healthPayload.analysis_date).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', timeZone: 'UTC' })} UTC`
     : '—';
@@ -46,28 +48,10 @@ export function NationalServiceHero({
           {metrics.ipLevel && <> · Ionospheric perturbation <strong style={{ color: metrics.ipColor }}>{metrics.ipLevel}</strong></>}
         </p>
         <div className="cil-national-chips">
-          <span className={`cil-national-chip ${liveMode ? 'live' : 'demo'}`}>{liveMode ? 'Live monitoring' : 'Demo / RINEX analysis'}</span>
+          <span className={`cil-national-chip ${liveMode ? 'live' : 'demo'}`}>{liveMode ? 'Live monitoring' : 'Offline / RINEX analysis'}</span>
           <span className="cil-national-chip">AFREF · IGS · NTRIP</span>
           <span className="cil-national-chip muted">Updated {updated}</span>
         </div>
-      </div>
-      <div className="cil-national-stats">
-        {[
-          ['Stations', total, '#22d3ee'],
-          ['Online', onlineCount, '#1D9E75'],
-          ['Health', `${healthPct}%`, healthPct >= 80 ? '#1D9E75' : '#EF9F27'],
-          ['IP Index', metrics.ipIndex ?? '—', metrics.ipColor || '#22d3ee'],
-        ].map(([label, value, color]) => (
-          <div key={label} className="cil-national-stat">
-            <span>{label}</span>
-            <strong style={{ color }}>{loading ? '…' : value}</strong>
-          </div>
-        ))}
-      </div>
-      <div className="cil-national-links">
-        <button type="button" className="cil-national-link muted" onClick={copyShareLink}>
-          {shareCopied ? 'Link copied' : 'Copy share link'}
-        </button>
       </div>
     </section>
   );
@@ -93,7 +77,7 @@ function buildNationalCorsAnalysis({
 
   return {
     headline,
-    summary: `${applicationLabel} for ${stationName} (${regionId === 'zimbabwe' ? 'Zimbabwe' : regionId}): ${onlineCount}/${total} stations online (${healthPct}% health). IP index ${metrics?.ipIndex ?? '—'}/100 (${metrics?.ipLevel || '—'}). ${liveMode ? 'Live NOAA Kp and health API feeds are active.' : 'Demo mode is analysing indexed RINEX archives for the selected session.'}`,
+    summary: `${applicationLabel} for ${stationName} (${regionId === 'zimbabwe' ? 'Zimbabwe' : regionId}): ${onlineCount}/${total} stations online (${healthPct}% health). IP index ${metrics?.ipIndex ?? '—'}/100 (${metrics?.ipLevel || '—'}). ${liveMode ? 'Live NOAA Kp and health API feeds are active.' : 'Offline mode is analysing indexed RINEX archives for the selected session.'}`,
     mapNote: regionId === 'zimbabwe'
       ? 'The map shows all ZimCORS reference stations. Click a marker or table row to monitor a site and open integrity details.'
       : 'This region shows reference ionosphere context. Full ZimCORS health mapping is available for Zimbabwe.',
@@ -113,7 +97,7 @@ function buildNationalCorsAnalysis({
       ? isSimulatedHealth(healthPayload)
         ? `LIVE mode · ${healthTelemetryLabel(healthPayload)} · ${healthPayload?.analysis_date ? new Date(healthPayload.analysis_date).toISOString().slice(11, 16) : '—'} UTC`
         : `Live blend · health updated ${healthPayload?.analysis_date ? new Date(healthPayload.analysis_date).toISOString().slice(11, 16) : '—'} UTC`
-      : 'Demo / RINEX archive session — connect LIVE APIs for operational decisions',
+      : 'Offline / RINEX archive session — connect LIVE APIs for operational decisions',
   };
 }
 
@@ -144,10 +128,6 @@ export function NationalCorsAnalysis({
         <article className="cil-analysis-card">
           <h3>Station status</h3>
           <p>{analysis.networkNote}</p>
-        </article>
-        <article className="cil-analysis-card">
-          <h3>Service access</h3>
-          <p>{analysis.serviceNote}</p>
         </article>
       </div>
       <div className="cil-analysis-recs">

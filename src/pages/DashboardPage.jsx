@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { BarChart3, CloudSun, Database, Radio, RefreshCw, ShieldCheck, Telescope, Waves } from 'lucide-react';
 import { fetchLiveKp, getDemoSpaceWeather } from '../services/spaceWeatherApi.js';
-import { getNtripStatus, getNtripMountpoints, getNtripAlerts } from '../services/ntripApi.js';
 import OperationalServicesNav, { OPERATIONAL_LINK_TARGETS } from '../components/OperationalServicesNav.jsx';
 import { useOpsHealth } from '../context/OpsHealthContext.jsx';
-import { healthTelemetryLabel, isSimulatedHealth } from '../utils/corsNetworkData.js';
+import { healthTelemetryLabel } from '../utils/corsNetworkData.js';
 
 const dashboardLinks = [
   {
@@ -68,31 +67,6 @@ export default function DashboardPage({ onNavigate }) {
     alertsPath,
   } = useOpsHealth();
 
-  const [ntripStatus,     setNtripStatus]     = useState(null);
-  const [ntripMounts,     setNtripMounts]     = useState([]);
-  const [ntripAlertCount, setNtripAlertCount] = useState(0);
-  const [ntripLoading,    setNtripLoading]    = useState(true);
-
-  const refreshNtrip = useCallback(async () => {
-    try {
-      const [st, mps, als] = await Promise.all([
-        getNtripStatus(),
-        getNtripMountpoints(),
-        getNtripAlerts(true),
-      ]);
-      setNtripStatus(st);
-      setNtripMounts(Array.isArray(mps) ? mps : []);
-      setNtripAlertCount(Array.isArray(als) ? als.length : 0);
-    } catch { /* keep stale */ }
-    finally { setNtripLoading(false); }
-  }, []);
-
-  useEffect(() => {
-    refreshNtrip();
-    const id = setInterval(refreshNtrip, 30_000);
-    return () => clearInterval(id);
-  }, [refreshNtrip]);
-
   const [kp, setKp] = useState(null);
   const [kpMode, setKpMode] = useState('demo');
   const [kpUpdated, setKpUpdated] = useState(null);
@@ -120,7 +94,6 @@ export default function DashboardPage({ onNavigate }) {
   const totalStations = healthStats.total;
   const healthPct = healthStats.operationalPct;
   const archiveDerived = healthPayload?.health_summary?.archive_derived;
-  const telemetryLive = healthPayload?.health_summary?.telemetry_live ?? 0;
   const hasStationIssues = stationIssues > 0;
   const hasActiveAlerts = alertCount > 0;
 
@@ -136,29 +109,17 @@ export default function DashboardPage({ onNavigate }) {
     }
   };
 
-  const loadSnapshot = () => Promise.all([refreshHealth(), refreshKp(), refreshNtrip()]);
-
-  // ── NTRIP-derived ZimCORS stats ──────────────────────────────
-  const ntripTotal   = ntripStatus?.totalMountpoints  ?? ntripMounts.length;
-  const ntripOnline  = ntripStatus?.activeMountpoints ?? ntripMounts.filter(m => m.status?.connected).length;
-  const ntripOffline = ntripTotal - ntripOnline;
-  const ntripAvgLat  = ntripStatus?.averageLatencyMs;
-  const ntripHealth  = ntripStatus?.networkHealth ?? 'unknown';
-  const ntripHealthColor = ntripOffline === 0 ? '#1D9E75' : ntripOnline / Math.max(ntripTotal, 1) >= 0.8 ? '#EF9F27' : '#ef4444';
-  const useNtrip = !ntripLoading && ntripTotal > 0;
+  const loadSnapshot = () => Promise.all([refreshHealth(), refreshKp()]);
+  const onlinePct = totalStations ? Math.round((healthStats.online / totalStations) * 100) : null;
 
   const statusCards = [
     {
       label: 'ZimCORS Network',
-      value: ntripLoading ? '…' : useNtrip
-        ? `${ntripOnline}/${ntripTotal} operational`
-        : (loading ? '…' : `${healthStats.operational}/${totalStations} operational`),
-      note: useNtrip
-        ? `${ntripAlertCount > 0 ? `${ntripAlertCount} active alert${ntripAlertCount === 1 ? '' : 's'} · ` : ''}${ntripOnline} online · ${ntripOffline} offline · NTRIP ${ntripHealth}${ntripAvgLat ? ` · avg ${ntripAvgLat}ms latency` : ''}`
-        : (healthPayload
-            ? `${hasActiveAlerts ? `${alertStats.count} active alert${alertStats.count === 1 ? '' : 's'} · ` : ''}${healthStats.online} online · ${healthStats.degraded} degraded · ${healthTelemetryLabel(healthPayload)}`
-            : 'Zimbabwe station health and integrity'),
-      color: useNtrip ? ntripHealthColor : (healthPct == null ? '#ff8c00' : healthPct >= 80 ? '#1D9E75' : '#EF9F27'),
+      value: loading ? '…' : `${healthStats.online}/${totalStations} online`,
+      note: healthPayload
+        ? `Network health ${onlinePct ?? '—'}% · ${healthStats.degraded} degraded · ${healthStats.offline} offline · ${healthTelemetryLabel(healthPayload)}`
+        : 'Zimbabwe station health and integrity',
+      color: onlinePct == null ? '#22d3ee' : onlinePct >= 80 ? '#1D9E75' : '#EF9F27',
       icon: Radio,
       action: () => openPage('cors'),
     },
@@ -183,14 +144,12 @@ export default function DashboardPage({ onNavigate }) {
       action: () => openPage('weather', kp != null && kp >= 4 ? '/weather?region=southern' : OPERATIONAL_LINK_TARGETS.weather),
     },
     {
-      label: 'Telemetry Blend',
-      value: loading ? '…' : telemetryLive ? `${telemetryLive} live feed` : isSimulatedHealth(healthPayload) ? 'Archive / seed' : 'Live receivers',
-      note: healthPayload && !isSimulatedHealth(healthPayload)
-        ? 'Receiver telemetry merged with RINEX archive health'
-        : 'Configure the live telemetry feed to enable live blend mode',
-      color: '#1D9E75',
-      icon: ShieldCheck,
-      action: openAlertsHub,
+      label: 'Data Centre',
+      value: 'Data Centre',
+      note: 'RINEX catalogue, archive coverage, and GNSS data services',
+      color: '#22d3ee',
+      icon: Database,
+      action: () => onNavigate?.('alerts', OPERATIONAL_LINK_TARGETS.dataCentre),
     },
   ];
 
@@ -253,7 +212,6 @@ export default function DashboardPage({ onNavigate }) {
         </div>
       </section>
 
-      <OperationalServicesNav variant="purple" className="dashboard-ops-nav" />
 
       <section className="dashboard-status-grid" aria-label="Operational status">
         {statusCards.map(({ label, value, note, color, icon: Icon, action }) => (

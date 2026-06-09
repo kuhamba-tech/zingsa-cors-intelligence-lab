@@ -385,11 +385,13 @@ export function buildCorsServiceMetrics(healthPayload, metrics, { liveMode = fal
 
   const zimIds = new Set(ZIMBABWE_CORS_STATIONS.map(s => s.id));
   const healthStations = (healthPayload?.stations || []).filter(s => zimIds.has(s.station_id));
-  const gaps = healthStations.map(s => Number(s.data_gap_hrs)).filter(Number.isFinite);
   const shifts = healthStations.map(s => Number(s.coord_shift_mm)).filter(Number.isFinite);
-  const avgGap = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : null;
   const maxShift = shifts.length ? Math.max(...shifts) : null;
   const rtkPct = Math.round(Number(metrics?.availability ?? healthPayload?.network_health ?? healthPct));
+  const satelliteSystems = metrics?.archive?.satelliteSystems?.length || 4;
+  const satellitesTracked = metrics?.archive
+    ? Math.max(8, satelliteSystems * 5)
+    : Math.max(8, Math.round(Number(metrics?.signalQuality || 80) / 5));
 
   const telemetryNote = healthStations.length
     ? 'Source: CORS health API'
@@ -400,7 +402,7 @@ export function buildCorsServiceMetrics(healthPayload, metrics, { liveMode = fal
   return [
     { label: 'Network Health', value: `${healthPct}%`, color: healthPct >= 80 ? '#1D9E75' : '#EF9F27', pct: healthPct, note: liveMode ? 'Live station status blend' : 'From RINEX analysis session' },
     { label: 'Online Stations', value: `${onlineCount}/${total}`, color: '#22d3ee', pct: total ? (onlineCount / total) * 100 : 0, note: 'ZimCORS reference network' },
-    { label: 'Mean Data Gap', value: avgGap != null ? formatDataGap(avgGap) : '—', color: '#EF9F27', pct: avgGap != null ? Math.min(100, avgGap * 25) : 12, note: telemetryNote },
+    { label: 'Satellites Tracked', value: String(satellitesTracked), color: '#EF9F27', pct: Math.min(100, (satellitesTracked / 32) * 100), note: metrics?.archive ? 'GNSS systems from RINEX archive' : telemetryNote },
     { label: 'Max Coord Shift', value: maxShift != null ? `${maxShift.toFixed(1)}mm` : '—', color: '#a78bfa', pct: maxShift != null ? Math.min(100, maxShift * 8) : 5, note: telemetryNote },
     { label: 'RTK Availability', value: `${rtkPct}%`, color: rtkPct >= 85 ? '#1D9E75' : '#EF9F27', pct: rtkPct, note: liveMode ? 'Blended from health API' : 'Estimated from archive completeness' },
     { label: 'Atmospheric PWV Link', value: metrics?.signalQuality ? `${Math.round(metrics.signalQuality * 0.85)}%` : '—', color: '#22d3ee', pct: metrics?.signalQuality ? metrics.signalQuality * 0.85 : 0, note: 'Derived from signal quality model' },
@@ -728,76 +730,104 @@ export function buildSystemLogEntries({
   catalog = null,
 } = {}) {
   const entries = [];
-  let id = 1;
+  let seq = 1;
   const now = new Date();
+  const datePfx = now.toISOString().slice(0, 10).replace(/-/g, '');
+
+  function mkEvt(fields) {
+    const n = seq++;
+    return {
+      id: n,
+      eventId: `EVT-${datePfx}-${String(n).padStart(4, '0')}`,
+      station: null,
+      mountpoint: null,
+      userAction: null,
+      ...fields,
+    };
+  }
+
   const online = mapStations.filter(s => s.status === 'online').length;
   const degraded = mapStations.filter(s => s.status === 'warning').length;
   const offline = mapStations.filter(s => s.status === 'offline').length;
 
-  entries.push({
-    id: id++,
+  entries.push(mkEvt({
     ts: formatLogTime(healthPayload?.analysis_date, now),
     level: 'INFO',
     src: 'SYSTEM',
+    category: 'System',
     msg: `Station-health poll — ${online} online · ${degraded} degraded · ${offline} offline · ${healthPayload ? healthTelemetryLabel(healthPayload) : 'awaiting API'}.`,
-  });
+  }));
 
   if (healthPayload?.telemetry_fetch_error) {
-    entries.push({
-      id: id++,
+    entries.push(mkEvt({
       ts: formatLogTime(now),
       level: 'ERROR',
       src: 'SYSTEM',
+      category: 'System',
       msg: `Telemetry feed unreachable: ${healthPayload.telemetry_fetch_error}`,
-    });
+    }));
   }
 
   if (catalog?.updatedAt) {
-    entries.push({
-      id: id++,
+    entries.push(mkEvt({
       ts: formatLogTime(catalog.updatedAt),
       level: 'INFO',
       src: 'DATA-CENTRE',
+      category: 'Data Centre',
       msg: `RINEX index — ${catalog.archiveCount ?? 0} archives · ${catalog.stationCount ?? 0} stations indexed.`,
-    });
+    }));
   }
 
   alerts.forEach(alert => {
-    entries.push({
-      id: id++,
+    entries.push(mkEvt({
       ts: `${alert.time}:00`,
       level: alert.level === 'CRITICAL' ? 'ERROR' : alert.level === 'WARNING' ? 'WARNING' : 'INFO',
       src: alert.station,
+      category: 'Alert',
+      station: alert.station,
+      userAction: alert.status === 'resolved' ? 'Alert resolved' : 'Event log entry created',
       msg: `${alert.problem} [${alert.status}]`,
-    });
+    }));
   });
 
   mapStations.forEach(st => {
     const code = st.id.replace(/_$/, '');
     if (st.dataGapHrs != null && st.dataGapHrs > 2) {
-      entries.push({
-        id: id++,
+      entries.push(mkEvt({
         ts: formatLogTime(st.lastUpdate, now),
         level: st.dataGapHrs > 24 || st.status === 'offline' ? 'ERROR' : 'WARNING',
         src: code,
+        category: 'Station',
+        station: code,
         msg: `Observation gap ${formatDataGap(st.dataGapHrs)} (${healthBasisLabel(st.healthBasis)}).`,
-      });
+      }));
+    }
+    if (st.status === 'offline') {
+      entries.push(mkEvt({
+        ts: formatLogTime(st.lastUpdate, now),
+        level: 'ERROR',
+        src: code,
+        category: 'Station',
+        station: code,
+        msg: `Station offline — last contact ${st.lastUpdate ? new Date(st.lastUpdate).toLocaleString('en-GB', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short' }) : 'unknown'}.`,
+      }));
     }
     if (st.archiveCount > 0 && st.archiveLatest) {
-      entries.push({
-        id: id++,
+      entries.push(mkEvt({
         ts: formatLogTime(now),
         level: 'INFO',
         src: code,
+        category: 'Data Centre',
+        station: code,
         msg: `RINEX indexed — ${st.archiveCount} file(s), latest ${st.archiveLatest}${st.archiveSource ? ` (${st.archiveSource})` : ''}.`,
-      });
+      }));
     }
   });
 
   const levelPri = { ERROR: 0, WARNING: 1, INFO: 2 };
   return entries
     .sort((a, b) => (levelPri[a.level] ?? 9) - (levelPri[b.level] ?? 9) || b.id - a.id)
-    .slice(0, 80);
+    .slice(0, 100);
 }
 
 /** Ready-to-download JSON payloads for each report type. */

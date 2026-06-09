@@ -66,6 +66,23 @@ export default function DataCentreView() {
   }, [indexedByStation]);
 
   const indexedCount = coverage.filter(s => s.indexed).length;
+
+  // When the RINEX catalog fails, fall back to health-API station counts
+  const zimIds = useMemo(() => ZIMBABWE_CORS_STATIONS.map(s => s.id), []);
+  const healthStations = useMemo(
+    () => (healthPayload?.stations || []).filter(st => zimIds.includes(st.station_id)),
+    [healthPayload, zimIds],
+  );
+  const healthOnline   = healthPayload?.health_summary?.online   ?? healthStations.filter(s => s.status === 'online').length;
+  const healthDegraded = healthPayload?.health_summary?.degraded ?? healthStations.filter(s => s.status === 'warning' || s.status === 'degraded').length;
+  const healthTotal    = ZIMBABWE_CORS_STATIONS.length;
+  const effectiveCoverage = indexedCount > 0 ? indexedCount : (healthPayload ? healthOnline + healthDegraded : 0);
+  const coverageNote   = indexedCount > 0
+    ? 'Stations with at least one indexed archive'
+    : healthPayload
+      ? 'Derived from health API (no RINEX index yet)'
+      : 'No catalog data available';
+
   const filteredArchives = useMemo(() => {
     const list = catalog?.archives || [];
     if (sourceFilter === 'all') return list;
@@ -129,25 +146,25 @@ export default function DataCentreView() {
         <div className="cas-stat-card">
           <div className="cas-stat-left">
             <div className="cas-stat-label">ZimCORS Coverage</div>
-            <div className="cas-stat-value green">{indexedCount}/{ZIMBABWE_CORS_STATIONS.length}</div>
-            <div className="cas-stat-note">Stations with at least one indexed archive</div>
+            <div className="cas-stat-value green">{effectiveCoverage}/{healthTotal}</div>
+            <div className="cas-stat-note">{coverageNote}</div>
           </div>
         </div>
         <div className="cas-stat-card">
           <div className="cas-stat-left">
-            <div className="cas-stat-label">Health API Blend</div>
-            <div className="cas-stat-value" style={{ fontSize: '1rem' }}>
-              {healthSummary ? `${healthSummary.operational ?? '—'}/${ZIMBABWE_CORS_STATIONS.length}` : '—'}
+            <div className="cas-stat-label">Stations Online</div>
+            <div className="cas-stat-value" style={{ fontSize: '1.2rem', color: '#22d3ee' }}>
+              {healthPayload ? `${healthOnline}/${healthTotal}` : '—'}
             </div>
             <div className="cas-stat-note">
               {healthPayload ? (
                 <>
-                  {healthTelemetryLabel(healthPayload)}
+                  {healthOnline} online · {healthDegraded} degraded · {healthTotal - healthOnline - healthDegraded} offline
                   {healthPayload.analysis_date && (
-                    <> · health API {new Date(healthPayload.analysis_date).toLocaleString('en-GB')}</>
+                    <> · {new Date(healthPayload.analysis_date).toLocaleString('en-GB')}</>
                   )}
                 </>
-              ) : 'Operational stations from /api/gnss/station-health'}
+              ) : 'Awaiting /api/gnss/station-health'}
             </div>
           </div>
         </div>

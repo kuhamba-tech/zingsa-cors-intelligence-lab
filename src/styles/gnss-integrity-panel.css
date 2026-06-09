@@ -234,6 +234,139 @@
 .gnss-stat__label { font-size: 0.55rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #4b5563; margin-bottom: 4px; }
 .gnss-stat__value { font-size: 0.85rem; font-weight: 900; }
 
+/* GNSS signal performance */
+.gnss-signal-performance {
+  margin: 18px;
+  padding: 16px 18px 14px;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 14px;
+  background: rgba(3, 8, 26, 0.72);
+}
+
+.gnss-signal-title {
+  margin-bottom: 12px;
+  color: #a7b3c9;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.gnss-signal-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #a7b3c9;
+  font-size: 0.72rem;
+}
+
+.gnss-signal-table th {
+  padding: 8px 12px;
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.gnss-signal-table th:not(:first-child),
+.gnss-signal-table td:not(:first-child) {
+  text-align: center;
+}
+
+.gnss-signal-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  font-weight: 800;
+}
+
+.gnss-signal-table td:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gnss-signal-table td:last-child {
+  color: #f8fafc;
+  text-align: left;
+}
+
+.gnss-signal-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.gnss-signal-index {
+  display: inline-block;
+  min-width: 2.4ch;
+  color: #a7b3c9;
+  text-align: right;
+}
+
+.gnss-const-dot,
+.gnss-signal-dot {
+  display: inline-block;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.gnss-const-dot {
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+}
+
+.gnss-signal-dot {
+  width: 12px;
+  height: 12px;
+}
+
+.gnss-frequency-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gnss-frequency-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 58px;
+  color: #a7b3c9;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.gnss-signal-na {
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.gnss-signal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gnss-signal-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.gnss-signal-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
 /* Summary */
 .gnss-summary {
   display: flex;

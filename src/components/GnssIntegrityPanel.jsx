@@ -53,12 +53,17 @@ export default function GnssIntegrityPanel({ stationName = 'Station', region = '
     const rtkColor = rtkFix === 'Fixed' ? '#22c55e' : '#EF9F27';
     const pppColor = pppStatus === 'Converged' ? '#22c55e' : '#EF9F27';
     const nominal = quality >= 74 && latency < 1.6;
-
     return {
       hAcc, vAcc, latency, satellites, corrAge, quality, lastOutage,
       rtkFix, pppStatus, rtkColor, pppColor, nominal,
       posSpark: sparkData(s + 1, 22, hAcc * 0.7, hAcc * 1.6),
       qualSpark: sparkData(s + 2, 22, quality * 0.87, Math.min(quality * 1.06, 100)),
+      signalPerformance: [
+        { name: 'GPS', color: '#22c55e', frequencies: [{ label: 'L1', level: 'LOW' }, { label: 'L2', level: 'LOW' }, { label: 'L5', level: 'LOW' }] },
+        { name: 'GLONASS', color: '#a855f7', frequencies: [{ label: 'L1', level: 'LOW' }, { label: 'L2', level: 'LOW' }] },
+        { name: 'Galileo', color: '#22d3ee', frequencies: [{ label: 'E1', level: 'LOW' }, { label: 'E5a', level: 'LOW' }, { label: 'E5b', level: 'LOW' }, { label: 'E5ab', level: 'LOW' }] },
+        { name: 'BeiDou', color: '#f97316', frequencies: [{ label: 'B1', level: 'LOW' }, { label: 'B2', level: quality < 80 ? 'MODERATE' : 'LOW' }, { label: 'B3', level: 'LOW' }] },
+      ],
     };
   }, [stationName, region]);
 
@@ -185,6 +190,43 @@ export default function GnssIntegrityPanel({ stationName = 'Station', region = '
                 <div className="gnss-stat__value" style={{ color }}>{value}</div>
               </div>
             ))}
+          </div>
+
+          <div className="gnss-signal-performance">
+            <div className="gnss-signal-title">GNSS SIGNAL PERFORMANCE</div>
+            <table className="gnss-signal-table">
+              <thead>
+                <tr>
+                  <th>System</th>
+                  <th>Frequency Tracked</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.signalPerformance.map(row => (
+                  <tr key={row.name}>
+                    <td>
+                      <span className="gnss-const-dot" style={{ background: row.color }} />
+                      <span>{row.name}</span>
+                    </td>
+                    <td>
+                      <div className="gnss-frequency-list">
+                        {row.frequencies.map(freq => (
+                          <span key={freq.label} className="gnss-frequency-chip">
+                            <span className="gnss-signal-dot" style={{ background: freq.level === 'MODERATE' ? '#eab308' : freq.level === 'HIGH' ? '#f97316' : '#22c55e' }} />
+                            {freq.label}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="gnss-signal-legend">
+              {[['#22c55e', 'Low'], ['#eab308', 'Moderate'], ['#f97316', 'High']].map(([color, label]) => (
+                <span key={label}><i style={{ background: color }} />{label}</span>
+              ))}
+            </div>
           </div>
 
           {/* Summary */}

@@ -115,10 +115,10 @@ function deriveIonosphereView(status, health) {
     return order[idx];
   };
   const gnssPerformance = [
-    { name: 'GPS', color: '#22c55e', l1: gnssImpact, l2: gnssImpact, l5: bump(gnssImpact, -1) },
-    { name: 'Galileo', color: '#22d3ee', l1: bump(gnssImpact, -1), l2: gnssImpact, l5: bump(gnssImpact, -1) },
-    { name: 'BeiDou', color: '#f97316', l1: gnssImpact, l2: bump(gnssImpact, 1), l5: gnssImpact },
-    { name: 'GLONASS', color: '#a855f7', l1: gnssImpact, l2: gnssImpact, l5: null },
+    { name: 'GPS', color: '#22c55e', frequencies: [{ label: 'L1', level: gnssImpact }, { label: 'L2', level: gnssImpact }, { label: 'L5', level: bump(gnssImpact, -1) }] },
+    { name: 'GLONASS', color: '#a855f7', frequencies: [{ label: 'L1', level: gnssImpact }, { label: 'L2', level: gnssImpact }] },
+    { name: 'Galileo', color: '#22d3ee', frequencies: [{ label: 'E1', level: bump(gnssImpact, -1) }, { label: 'E5a', level: gnssImpact }, { label: 'E5b', level: gnssImpact }, { label: 'E5ab', level: bump(gnssImpact, -1) }] },
+    { name: 'BeiDou', color: '#f97316', frequencies: [{ label: 'B1', level: gnssImpact }, { label: 'B2', level: bump(gnssImpact, 1) }, { label: 'B3', level: gnssImpact }] },
   ];
   const forecastStep = (baseLevel, step) => {
     const order = ['LOW', 'MODERATE', 'HIGH', 'SEVERE'];
@@ -1039,13 +1039,11 @@ export default function IonosphericConditionsMonitor() {
             {/* GNSS Signal Performance */}
             <article className="icm2-panel">
               <div className="icm2-card-title icm2-panel-mb">GNSS SIGNAL PERFORMANCE</div>
-              <table className="icm2-table">
+              <table className="icm2-table icm2-signal-table">
                 <thead>
                   <tr>
                     <th>System</th>
-                    <th style={{ textAlign: 'center' }}>L1</th>
-                    <th style={{ textAlign: 'center' }}>L2</th>
-                    <th style={{ textAlign: 'center' }}>L5</th>
+                    <th>Frequency Tracked</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1053,11 +1051,18 @@ export default function IonosphericConditionsMonitor() {
                     <tr key={row.name}>
                       <td>
                         <span className="icm2-const-dot" style={{ background: row.color }} />
-                        {row.name}
+                        <span>{row.name}</span>
                       </td>
-                      <td style={{ textAlign: 'center' }}><FreqDot level={row.l1} /></td>
-                      <td style={{ textAlign: 'center' }}><FreqDot level={row.l2} /></td>
-                      <td style={{ textAlign: 'center' }}><FreqDot level={row.l5} /></td>
+                      <td>
+                        <div className="icm2-frequency-list">
+                          {row.frequencies.map(freq => (
+                            <span key={freq.label} className="icm2-frequency-chip">
+                              <FreqDot level={freq.level} />
+                              {freq.label}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

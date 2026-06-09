@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Clock, Globe2, Moon, Star } from 'lucide-react';
 import OperationalServicesNav from '../components/OperationalServicesNav.jsx';
 import StellariumWebMap from '../components/StellariumWebMap.jsx';
@@ -63,6 +64,7 @@ function nowLocalDate() {
 }
 
 export default function ObservatoryHubPage() {
+  const { search } = useLocation();
   const [utc, setUtc] = useState(nowUTCDateTime);
   const [utcTime, setUtcTime] = useState(nowUTCTime);
   const [utcDate, setUtcDate] = useState(nowUTCDate);
@@ -99,6 +101,18 @@ export default function ObservatoryHubPage() {
     }, 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const tool = new URLSearchParams(search).get('tool');
+    if (tool !== 'stellarium-telescope') return;
+
+    window.requestAnimationFrame(() => {
+      document.getElementById('stellarium-telescope')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }, [search]);
 
   const skyState = astronomy?.sky_state || 'night';
   const skyLabel = astronomy?.sky_state_label || 'Night Sky';
@@ -166,7 +180,7 @@ export default function ObservatoryHubPage() {
 
       <OperationalServicesNav variant="purple" />
 
-      <div className="obs-content">
+      <div className="obs-content" id="stellarium-telescope">
         <StellariumWebMap defaultLat={OBS.lat} defaultLon={OBS.lon} />
         <TelescopeSimulator defaultLat={OBS.lat} defaultLon={OBS.lon} />
         <NightSkyViewer defaultLat={OBS.lat} defaultLon={OBS.lon} defaultCity={OBS.city} />

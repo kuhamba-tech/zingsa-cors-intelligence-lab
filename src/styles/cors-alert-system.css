@@ -2100,3 +2100,86 @@
 .cas-notif-item.critical strong { color: #fca5a5; }
 .cas-notif-item.warning strong { color: #fcd34d; }
 .cas-notif-empty { padding: 16px 14px; color: #64748b; font-size: 0.75rem; }
+
+/* ─── ALARM BANNER ──────────────────────────────────────────── */
+.cas-alarm-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 9px 24px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid;
+}
+
+.cas-alarm-banner.critical {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.40);
+  color: #fca5a5;
+}
+
+.cas-alarm-banner.warning {
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.38);
+  color: #fcd34d;
+}
+
+.cas-alarm-banner.muted {
+  opacity: 0.65;
+}
+
+.cas-alarm-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cas-alarm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.07);
+  color: inherit;
+  font-size: 0.67rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 0.15s;
+}
+
+.cas-alarm-btn:hover { background: rgba(255,255,255,0.14); }
+
+.cas-alarm-btn.ack {
+  border-color: rgba(34,197,94,0.45);
+  color: #86efac;
+}
+
+.cas-alarm-btn.ack:hover { background: rgba(34,197,94,0.12); }
+
+@keyframes cas-alarm-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+.cas-alarm-pulse {
+  animation: cas-alarm-pulse 0.7s ease-in-out infinite;
+}
+
+/* ─── EVENT LOG — category badge ────────────────────────────── */
+.cas-event-category {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
