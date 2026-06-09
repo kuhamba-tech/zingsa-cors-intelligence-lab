@@ -5,6 +5,8 @@ import { loadCorsAlertSettings } from '../utils/corsAlertSettings.js';
 import { summarizeActiveAlertsFromHealth, summarizeZimHealth } from '../utils/corsNetworkData.js';
 
 const REFRESH_MS = 5 * 60 * 1000;
+const ZIM_IDS = ZIMBABWE_CORS_STATIONS.map(s => s.id);
+const TOTAL_STATIONS = ZIMBABWE_CORS_STATIONS.length;
 
 const OpsHealthContext = createContext(null);
 
@@ -28,19 +30,48 @@ export function OpsHealthProvider({ children }) {
     return () => clearInterval(id);
   }, [refresh]);
 
-  const zimIds = useMemo(() => ZIMBABWE_CORS_STATIONS.map(s => s.id), []);
-  const healthStats = useMemo(() => summarizeZimHealth(healthPayload, zimIds), [healthPayload, zimIds]);
+  const healthStats = useMemo(
+    () => summarizeZimHealth(healthPayload, ZIM_IDS),
+    [healthPayload],
+  );
+
   const alertStats = useMemo(
     () => summarizeActiveAlertsFromHealth(healthPayload, { thresholds: loadCorsAlertSettings().thresholds }),
     [healthPayload],
   );
 
-  const stationIssues = (healthStats.offline ?? 0) + (healthStats.degraded ?? 0);
-  const alertCount = alertStats.count ?? 0;
-  const badgeCount = stationIssues > 0 ? stationIssues : alertCount;
-  const alertsPath = stationIssues > 0
+  /**
+   * networkMetrics is the SINGLE SOURCE OF TRUTH for all aggregate network numbers.
+   * Every page must read from here — never re-derive from healthPayload independently.
+   *
+   *  healthPct  = online / total          → "Network Health" (29%)
+   *  uptimePct  = (online×100 + degraded×50) / total  → "Uptime" (65%)
+   */
+  const networkMetrics = useMemo(() => {
+    const online   = healthStats.online   ?? 0;
+    const degraded = healthStats.degraded ?? 0;
+    const offline  = healthStats.offline  ?? 0;
+    const total    = TOTAL_STATIONS;
+    const healthPct = total ? Math.round((online / total) * 100) : 0;
+    const uptimePct = total ? Math.round((online * 100 + degraded * 50) / total) : 0;
+    return {
+      total,
+      online,
+      degraded,
+      offline,
+      healthPct,
+      uptimePct,
+      alertCount:    alertStats.count    ?? 0,
+      criticalCount: alertStats.critical ?? 0,
+      warningCount:  alertStats.warning  ?? 0,
+    };
+  }, [healthStats, alertStats]);
+
+  const stationIssues = networkMetrics.offline + networkMetrics.degraded;
+  const badgeCount    = stationIssues > 0 ? stationIssues : networkMetrics.alertCount;
+  const alertsPath    = stationIssues > 0
     ? '/alerts?tab=stations'
-    : alertCount > 0
+    : networkMetrics.alertCount > 0
       ? '/alerts?tab=alerts'
       : '/alerts';
 
@@ -48,20 +79,21 @@ export function OpsHealthProvider({ children }) {
     healthPayload,
     healthStats,
     alertStats,
+    networkMetrics,
     loading,
     refresh,
     stationIssues,
-    alertCount,
+    alertCount: networkMetrics.alertCount,
     badgeCount,
     alertsPath,
   }), [
     healthPayload,
     healthStats,
     alertStats,
+    networkMetrics,
     loading,
     refresh,
     stationIssues,
-    alertCount,
     badgeCount,
     alertsPath,
   ]);

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Database, Download, FileText, RefreshCw } from 'lucide-react';
 import { ingestCorsData } from '../services/corsApi.js';
 import { useCorsAlertData } from '../context/CorsAlertDataContext.jsx';
+import { useOpsHealth } from '../context/OpsHealthContext.jsx';
 import { ZIMBABWE_CORS_STATIONS } from '../data/zimbabweCorsStations.js';
 import { buildReportPayload, downloadJsonReport, healthTelemetryLabel } from '../utils/corsNetworkData.js';
 
@@ -19,6 +20,7 @@ function formatSourceCounts(sourceCounts = {}) {
 
 export default function DataCentreView() {
   const { catalog, healthPayload, loading, refresh, error } = useCorsAlertData();
+  const { networkMetrics } = useOpsHealth();
   const [sourceFilter, setSourceFilter] = useState('all');
   const [ingesting, setIngesting] = useState(false);
   const [ingestMsg, setIngestMsg] = useState(null);
@@ -67,15 +69,10 @@ export default function DataCentreView() {
 
   const indexedCount = coverage.filter(s => s.indexed).length;
 
-  // When the RINEX catalog fails, fall back to health-API station counts
-  const zimIds = useMemo(() => ZIMBABWE_CORS_STATIONS.map(s => s.id), []);
-  const healthStations = useMemo(
-    () => (healthPayload?.stations || []).filter(st => zimIds.includes(st.station_id)),
-    [healthPayload, zimIds],
-  );
-  const healthOnline   = healthPayload?.health_summary?.online   ?? healthStations.filter(s => s.status === 'online').length;
-  const healthDegraded = healthPayload?.health_summary?.degraded ?? healthStations.filter(s => s.status === 'warning' || s.status === 'degraded').length;
-  const healthTotal    = ZIMBABWE_CORS_STATIONS.length;
+  // Route all station counts through networkMetrics — the single source of truth
+  const healthOnline   = networkMetrics.online;
+  const healthDegraded = networkMetrics.degraded;
+  const healthTotal    = networkMetrics.total;
   const effectiveCoverage = indexedCount > 0 ? indexedCount : (healthPayload ? healthOnline + healthDegraded : 0);
   const coverageNote   = indexedCount > 0
     ? 'Stations with at least one indexed archive'

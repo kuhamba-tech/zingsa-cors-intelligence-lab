@@ -16,7 +16,7 @@ import {
 } from '../utils/corsNetworkData.js';
 
 export function useCorsNetworkData() {
-  const { healthPayload, loading: healthLoading, refresh: refreshHealth } = useOpsHealth();
+  const { healthPayload, loading: healthLoading, refresh: refreshHealth, networkMetrics } = useOpsHealth();
   const [analysisPayload, setAnalysisPayload] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -133,12 +133,7 @@ export function useCorsNetworkData() {
     [alerts],
   );
 
-  const avgUptime = useMemo(() => {
-    if (!mapStations.length) return 0;
-    const online   = mapStations.filter(s => s.status === 'online').length;
-    const degraded = mapStations.filter(s => s.status === 'warning' || s.status === 'degraded').length;
-    return Math.round((online * 100 + degraded * 50) / mapStations.length);
-  }, [mapStations]);
+  const avgUptime = networkMetrics.uptimePct;
 
   const avgSignalQuality = useMemo(() => {
     if (!stationTableData.length) return 78;
@@ -172,6 +167,7 @@ export function useCorsNetworkData() {
     networkStatus,
     gnssAvailability,
     alertSummary,
+    networkMetrics,
     avgUptime,
     avgSignalQuality,
     signalData,

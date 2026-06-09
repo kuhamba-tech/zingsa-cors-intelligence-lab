@@ -15,40 +15,24 @@ import {
   buildMapStations,
   buildStationTableData,
   summarizeActiveAlertsFromHealth,
-  summarizeZimHealth,
 } from '../../utils/corsNetworkData.js';
 import { loadCorsAlertSettings } from '../../utils/corsAlertSettings.js';
+import { useOpsHealth } from '../../context/OpsHealthContext.jsx';
 import AfricaIonosphereMap from '../AfricaIonosphereMap.jsx';
 import CorsHealthNetworkMap from '../CorsHealthNetworkMap.jsx';
 
-function buildNetworkKpis({ healthPayload, metrics, liveMode, onStations, onIntegrity, onAlerts }) {
+function buildNetworkKpis({ networkMetrics, healthPayload, metrics, onStations, onIntegrity, onAlerts }) {
   const stationIds = ZIMBABWE_CORS_STATIONS.map(st => st.id);
-  const healthStatsFromApi = summarizeZimHealth(healthPayload, stationIds);
-  const alertStats = summarizeActiveAlertsFromHealth(healthPayload, { thresholds: loadCorsAlertSettings().thresholds });
   const healthStations = (healthPayload?.stations || []).filter(st => stationIds.includes(st.station_id));
-  const statusRows = metrics?.stationStatuses || [];
-  const fallbackOnline = statusRows.filter(st => st.status === 'online').length;
-  const fallbackDegraded = statusRows.filter(st => st.status === 'degraded' || st.status === 'warning').length;
-  const fallbackOffline = statusRows.filter(st => st.status === 'offline').length;
-  const healthStats = healthStatsFromApi.withData
-    ? healthStatsFromApi
-    : {
-        ...healthStatsFromApi,
-        online: fallbackOnline,
-        degraded: fallbackDegraded,
-        offline: fallbackOffline,
-        operational: fallbackOnline + fallbackDegraded,
-      };
   const shifts = healthStations.map(st => Number(st.coord_shift_mm)).filter(Number.isFinite);
   const maxShift = shifts.length ? Math.max(...shifts) : null;
-  const healthPct = healthStats.total ? Math.round((healthStats.online / healthStats.total) * 100) : 0;
-  const uptimePct = healthStats.total
-    ? Math.round(((healthStats.online * 100 + (healthStats.degraded ?? 0) * 50) / healthStats.total))
-    : 0;
-  const overall = healthStats.offline > 0 || alertStats.critical > 0
-    ? { label: 'Degraded', color: '#EF9F27', note: `${healthStats.offline} offline · ${healthStats.degraded} degraded` }
-    : healthStats.degraded > 0 || alertStats.warning > 0
-      ? { label: 'Watch', color: '#EF9F27', note: `${healthStats.degraded} degraded` }
+
+  const { online, degraded, offline, total, healthPct, uptimePct, alertCount, criticalCount, warningCount } = networkMetrics;
+
+  const overall = offline > 0 || criticalCount > 0
+    ? { label: 'Degraded', color: '#EF9F27', note: `${offline} offline · ${degraded} degraded` }
+    : degraded > 0 || warningCount > 0
+      ? { label: 'Watch', color: '#EF9F27', note: `${degraded} degraded` }
       : { label: 'Healthy', color: '#22c55e', note: 'All systems operational' };
 
   return [
@@ -62,15 +46,15 @@ function buildNetworkKpis({ healthPayload, metrics, liveMode, onStations, onInte
     },
     {
       label: 'Active Alerts',
-      value: String(alertStats.count),
-      note: `${alertStats.critical} Critical · ${alertStats.warning} Warning`,
-      color: alertStats.critical ? '#ef4444' : alertStats.warning ? '#EF9F27' : '#22c55e',
+      value: String(alertCount),
+      note: `${criticalCount} Critical · ${warningCount} Warning`,
+      color: criticalCount ? '#ef4444' : warningCount ? '#EF9F27' : '#22c55e',
       Icon: AlertTriangle,
       action: onAlerts,
     },
     {
       label: 'Stations Online',
-      value: `${healthStats.online}/${healthStats.total}`,
+      value: `${online}/${total}`,
       note: `${healthPct}% availability`,
       color: '#22d3ee',
       Icon: Radio,
@@ -188,10 +172,11 @@ export default function NationalCorsLabWorkspace({ lab }) {
     corsRisk, corsHealthMetrics, bridgeMonitoringMetrics, overviewPersonaSummary,
   } = lab;
 
+  const { networkMetrics } = useOpsHealth();
   const networkKpis = buildNetworkKpis({
+    networkMetrics,
     healthPayload,
     metrics,
-    liveMode,
     onStations: () => setMapView('stations'),
     onIntegrity: () => setMapView('integrity'),
     onAlerts: null,

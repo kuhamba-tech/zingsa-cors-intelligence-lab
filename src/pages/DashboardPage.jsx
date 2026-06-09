@@ -58,8 +58,7 @@ function kpLabel(kp) {
 export default function DashboardPage({ onNavigate }) {
   const {
     healthPayload,
-    healthStats,
-    alertStats,
+    networkMetrics,
     loading: healthLoading,
     refresh: refreshHealth,
     stationIssues,
@@ -91,8 +90,8 @@ export default function DashboardPage({ onNavigate }) {
   }, [refreshKp]);
 
   const loading = healthLoading || kpLoading;
-  const totalStations = healthStats.total;
-  const healthPct = healthStats.healthPct ?? healthStats.operationalPct;
+  const totalStations = networkMetrics.total;
+  const healthPct = networkMetrics.healthPct;
   const archiveDerived = healthPayload?.health_summary?.archive_derived;
   const hasStationIssues = stationIssues > 0;
   const hasActiveAlerts = alertCount > 0;
@@ -110,14 +109,14 @@ export default function DashboardPage({ onNavigate }) {
   };
 
   const loadSnapshot = () => Promise.all([refreshHealth(), refreshKp()]);
-  const onlinePct = totalStations ? Math.round((healthStats.online / totalStations) * 100) : null;
+  const onlinePct = healthPayload ? networkMetrics.healthPct : null;
 
   const statusCards = [
     {
       label: 'ZimCORS Network',
-      value: loading ? '…' : `${healthStats.online}/${totalStations} online`,
+      value: loading ? '…' : `${networkMetrics.online}/${totalStations} online`,
       note: healthPayload
-        ? `Network health ${onlinePct ?? '—'}% · ${healthStats.degraded} degraded · ${healthStats.offline} offline · ${healthTelemetryLabel(healthPayload)}`
+        ? `Network health ${onlinePct ?? '—'}% · ${networkMetrics.degraded} degraded · ${networkMetrics.offline} offline · ${healthTelemetryLabel(healthPayload)}`
         : 'Zimbabwe station health and integrity',
       color: onlinePct == null ? '#22d3ee' : onlinePct >= 80 ? '#1D9E75' : '#EF9F27',
       icon: Radio,
@@ -192,18 +191,18 @@ export default function DashboardPage({ onNavigate }) {
               <strong>
                 {loading
                   ? 'Updating…'
-                  : healthStats.offline > 0
-                    ? `${healthStats.offline} station${healthStats.offline === 1 ? '' : 's'} offline`
+                  : networkMetrics.offline > 0
+                    ? `${networkMetrics.offline} station${networkMetrics.offline === 1 ? '' : 's'} offline`
                     : hasActiveAlerts
-                      ? `${alertStats.count} active alert${alertStats.count === 1 ? '' : 's'}`
-                      : healthPct != null && healthPct >= 70
+                      ? `${networkMetrics.alertCount} active alert${networkMetrics.alertCount === 1 ? '' : 's'}`
+                      : healthPct >= 70
                         ? 'Operational'
                         : 'Review'}
               </strong>
               {!loading && healthPayload && (hasStationIssues || hasActiveAlerts) && (
                 <small style={{ display: 'block', color: '#94a3b8', fontSize: '0.72rem', marginTop: 4 }}>
-                  {healthStats.online} online · {healthStats.degraded} degraded
-                  {hasActiveAlerts ? ` · ${alertStats.critical} critical · ${alertStats.warning} warning` : ''}
+                  {networkMetrics.online} online · {networkMetrics.degraded} degraded
+                  {hasActiveAlerts ? ` · ${networkMetrics.criticalCount} critical · ${networkMetrics.warningCount} warning` : ''}
                   {kpMode === 'live' ? ` · Kp ${kp?.toFixed(1)} live` : ''}
                 </small>
               )}
@@ -239,13 +238,13 @@ export default function DashboardPage({ onNavigate }) {
           const linkDesc = id === 'alerts' && !healthLoading && (hasActiveAlerts || hasStationIssues)
             ? `${desc} ${
               hasActiveAlerts
-                ? `${alertStats.count} active alert${alertStats.count === 1 ? '' : 's'}`
+                ? `${networkMetrics.alertCount} active alert${networkMetrics.alertCount === 1 ? '' : 's'}`
                 : `${stationIssues} station${stationIssues === 1 ? '' : 's'} need review`
             }.`
             : desc;
           const linkPath = id === 'alerts' && (hasActiveAlerts || hasStationIssues)
             ? alertsPath
-            : id === 'cors' && healthStats.offline > 0
+            : id === 'cors' && networkMetrics.offline > 0
               ? '/cors?app=cors-health'
               : undefined;
           return (
