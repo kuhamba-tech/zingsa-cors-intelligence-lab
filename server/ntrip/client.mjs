@@ -8,7 +8,7 @@ import net  from 'node:net';
 import tls  from 'node:tls';
 import { EventEmitter } from 'node:events';
 import { parseSourcetable } from './sourcetable.mjs';
-import { scanFrames, summarizeFrames } from './rtcm.mjs';
+import { scanFrames, summarizeFrames, RTCM_TYPES } from './rtcm.mjs';
 
 const USER_AGENT = 'NTRIP ZINGSAMonitor/1.0';
 
@@ -208,7 +208,7 @@ export class NtripCasterClient extends EventEmitter {
 
     const constellations = new Set();
     for (const t of Object.keys(state.typeCounts).map(Number)) {
-      const info = (await import('./rtcm.mjs').then(m => m.RTCM_TYPES[t])) || {};
+      const info = RTCM_TYPES[t] || {};
       if (info.constellation) constellations.add(info.constellation);
     }
 

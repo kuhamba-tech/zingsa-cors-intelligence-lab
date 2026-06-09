@@ -16,7 +16,9 @@
     "cors:ingest": "node scripts/ingest-cors-data.mjs",
     "cors:ingest-gnss": "node scripts/ingest-cors-data.mjs --source gnss-apps",
     "cors:scan": "node scripts/ingest-cors-data.mjs --scan-only",
-    "cors:scan-gnss": "node scripts/ingest-cors-data.mjs --scan-only --source gnss-apps"
+    "cors:scan-gnss": "node scripts/ingest-cors-data.mjs --scan-only --source gnss-apps",
+    "ntrip:start": "node server/ntrip-service.mjs",
+    "ntrip:dev": "node --env-file=.env server/ntrip-service.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -27,7 +29,8 @@
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.17.0",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "playwright": "^1.60.0"

@@ -1,0 +1,6 @@
+data/cors-extracted/
+data/test-extract/
+*.log
+node_modules/
+dist/
+.vercel/

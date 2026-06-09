@@ -47,9 +47,9 @@ export async function getNtripAlerts(activeOnly = true) {
   return data.alerts ?? data;
 }
 
-/** GET /api/ntrip/history/:mountpoint */
+/** GET /api/ntrip/history?mountpoint=<name> */
 export async function getStreamHistory(mountpoint) {
-  return fetchJson(`/history/${encodeURIComponent(mountpoint)}`);
+  return fetchJson(`/history?mountpoint=${encodeURIComponent(mountpoint)}`);
 }
 
 // ── WebSocket live feed ────────────────────────────────────────
