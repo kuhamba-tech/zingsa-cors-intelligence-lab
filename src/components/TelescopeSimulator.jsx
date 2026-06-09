@@ -3,7 +3,7 @@ import {
   Brain,
   Crosshair,
   Eye,
-  MoveRight,
+  ArrowRight,
   Search,
   Telescope,
 } from 'lucide-react';
@@ -175,7 +175,14 @@ export default function TelescopeSimulator({ defaultLat = DEFAULT_LAT, defaultLo
             Practice telescope pointing, object tracking and observation planning.
           </p>
         </div>
-        <code className="obs-telescope-api">GET /api/astronomy/telescope</code>
+        <div className="obs-telescope-meta">
+          {catalog?.mode === 'simulated' && (
+            <span className="obs-telescope-mode-badge" title={catalog.catalog_note}>
+              Simulated · {catalog.catalog_count ?? catalog.objects?.length ?? 0} objects
+            </span>
+          )}
+          <code className="obs-telescope-api">GET /api/astronomy/telescope</code>
+        </div>
       </div>
 
       {error && <div className="obs-telescope-note obs-telescope-note--error">{error}</div>}
@@ -260,7 +267,7 @@ export default function TelescopeSimulator({ defaultLat = DEFAULT_LAT, defaultLo
 
           <div className="obs-telescope-actions">
             <button type="button" onClick={() => runAction('point')} disabled={!!busy}>
-              <MoveRight size={14} />
+              <ArrowRight size={14} />
               {busy === 'point' ? 'Slewing…' : 'Point Telescope'}
             </button>
             <button type="button" onClick={() => runAction('track')} disabled={!!busy}>
@@ -311,6 +318,9 @@ export default function TelescopeSimulator({ defaultLat = DEFAULT_LAT, defaultLo
             )}
             <p className="obs-telescope-hint">
               {status || catalog?.instructions || 'Select an object and point the simulated telescope.'}
+              {catalog?.catalog_note && !status && (
+                <span className="obs-telescope-sim-note"> {catalog.catalog_note}</span>
+              )}
             </p>
             {pointing.aligned && (
               <p className="obs-telescope-aligned">Object centred on crosshair</p>

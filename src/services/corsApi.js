@@ -32,14 +32,14 @@ export async function getCorsCatalog({ station, source, refresh } = {}) {
   return request(`/api/cors/catalog${q ? `?${q}` : ''}`, { timeout: CORS_DATA_TIMEOUT_MS });
 }
 
-export async function ingestCorsData({ station, limit = 20, extract = true } = {}) {
+export async function ingestCorsData({ station, source = 'gnss-apps', limit = 20, extract = true } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120000);
   try {
     const res = await fetch('/api/cors/ingest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ station, limit, extract }),
+      body: JSON.stringify({ station, source, limit, extract }),
       signal: controller.signal,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

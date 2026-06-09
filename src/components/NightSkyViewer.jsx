@@ -108,7 +108,9 @@ export default function NightSkyViewer({
         <div>
           <div className="obs-nightsky-ready">
             <Star size={12} />
-            {config?.status || (loading ? 'Loading…' : 'AstronomyAPI Ready')}
+            {config?.mode === 'local-ephemeris'
+              ? 'Local ephemeris · bright-star chart'
+              : config?.status || (loading ? 'Loading…' : 'Night sky API ready')}
           </div>
           <h2 className="obs-nightsky-title">Night Sky Viewer</h2>
           <p className="obs-nightsky-sub">
@@ -224,7 +226,10 @@ export default function NightSkyViewer({
             </div>
             {chart && (
               <div className="obs-nightsky-chart-meta">
-                {chart.visible_count} stars · {chart.date_display} · {timeDisplay}
+                {chart.is_night ? 'Night chart' : 'Daylight chart'}
+                {' · '}{chart.visible_count} stars above 10°
+                {' · '}{chart.date_display} · {timeDisplay}
+                {chart.moon_phase != null && ` · Moon ${Math.round(Math.abs(chart.moon_phase - 0.5) * 200)}% lit`}
               </div>
             )}
           </div>

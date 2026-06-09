@@ -1,41 +1,69 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getCorsCatalog, getCorsDemoAnalysis, getCorsStationHealth } from '../services/corsApi.js';
+import { getCorsCatalog, getCorsDemoAnalysis } from '../services/corsApi.js';
+import { useOpsHealth } from '../context/OpsHealthContext.jsx';
+import { loadCorsAlertSettings, saveCorsAlertSettings } from '../utils/corsAlertSettings.js';
 import {
   buildAlertsFromStations,
   buildAlertSummary,
   buildGnssAvailability,
   buildHealthSegments,
   buildMapStations,
+  buildNetworkTrendSeries,
   buildNotifications,
   buildStationTableData,
+  buildSystemLogEntries,
   computeNetworkStatus,
 } from '../utils/corsNetworkData.js';
 
-function genSeries(base, amp, n = 25) {
-  return Array.from({ length: n }, (_, i) =>
-    Math.round((base + Math.sin(i * 0.6) * amp + (Math.random() - 0.5) * amp * 0.5) * 10) / 10,
-  );
-}
-
 export function useCorsNetworkData() {
-  const [healthPayload, setHealthPayload] = useState(null);
+  const { healthPayload, loading: healthLoading, refresh: refreshHealth } = useOpsHealth();
   const [analysisPayload, setAnalysisPayload] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedStationId, setSelectedStationId] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [demoAlertScenarios, setDemoAlertScenariosState] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && localStorage.getItem('zingsa-demo-alert-scenarios') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const setDemoAlertScenarios = useCallback((value) => {
+    setDemoAlertScenariosState(prev => {
+      const next = typeof value === 'function' ? value(prev) : value;
+      try {
+        localStorage.setItem('zingsa-demo-alert-scenarios', next ? '1' : '0');
+      } catch {
+        /* ignore storage errors */
+      }
+      return next;
+    });
+  }, []);
+  const [alertSettings, setAlertSettings] = useState(() => loadCorsAlertSettings());
+
+  const updateAlertSettings = useCallback((patch) => {
+    setAlertSettings(prev => {
+      const next = {
+        thresholds: { ...prev.thresholds, ...patch.thresholds },
+        notifications: { ...prev.notifications, ...patch.notifications },
+      };
+      saveCorsAlertSettings(next);
+      return next;
+    });
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [health, analysis, catalogRes] = await Promise.all([
-        getCorsStationHealth({ country: 'Zimbabwe' }),
+      const [, analysis, catalogRes] = await Promise.all([
+        refreshHealth(),
         getCorsDemoAnalysis({ station: 'ZINH', region: 'zimbabwe', source: 'tec-analysis' }),
-        getCorsCatalog({ source: 'tec-analysis' }).catch(() => null),
+        getCorsCatalog().catch(() => null),
       ]);
-      setHealthPayload(health);
       setAnalysisPayload(analysis);
       setCatalog(catalogRes);
     } catch (err) {
@@ -43,7 +71,7 @@ export function useCorsNetworkData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshHealth]);
 
   useEffect(() => {
     refresh();
@@ -52,8 +80,8 @@ export function useCorsNetworkData() {
   }, [refresh]);
 
   const mapStations = useMemo(
-    () => buildMapStations(healthPayload),
-    [healthPayload],
+    () => buildMapStations(healthPayload, { useDemoOverrides: demoAlertScenarios }),
+    [healthPayload, demoAlertScenarios],
   );
 
   const stationTableData = useMemo(
@@ -72,8 +100,12 @@ export function useCorsNetworkData() {
   );
 
   const alerts = useMemo(
-    () => buildAlertsFromStations(mapStations),
-    [mapStations],
+    () => buildAlertsFromStations(mapStations, {
+      includeResolved: demoAlertScenarios,
+      thresholds: alertSettings.thresholds,
+      stationTableData,
+    }),
+    [mapStations, demoAlertScenarios, alertSettings.thresholds, stationTableData],
   );
 
   const activeAlerts = useMemo(
@@ -112,18 +144,18 @@ export function useCorsNetworkData() {
     return Math.round(stationTableData.reduce((acc, st) => acc + st.gnssQuality, 0) / stationTableData.length);
   }, [stationTableData]);
 
-  const signalData = useMemo(() => genSeries(avgSignalQuality, 8), [avgSignalQuality]);
-  const accuracyData = useMemo(() => genSeries(1.8, 0.4), []);
+  const { signalData, accuracyData } = useMemo(
+    () => buildNetworkTrendSeries(stationTableData),
+    [stationTableData],
+  );
 
-  const handleAlertAction = useCallback((alert, action) => {
-    setSelectedStationId(alert.station);
-    if (action === 'investigate' || action === 'monitor') {
-      setShowNotifications(false);
-    }
-  }, []);
+  const systemLogs = useMemo(
+    () => buildSystemLogEntries({ mapStations, alerts, healthPayload, catalog }),
+    [mapStations, alerts, healthPayload, catalog],
+  );
 
   return {
-    loading,
+    loading: loading || healthLoading,
     error,
     refresh,
     catalog,
@@ -140,12 +172,17 @@ export function useCorsNetworkData() {
     gnssAvailability,
     alertSummary,
     avgUptime,
+    avgSignalQuality,
     signalData,
     accuracyData,
+    systemLogs,
     selectedStationId,
     setSelectedStationId,
     showNotifications,
     setShowNotifications,
-    handleAlertAction,
+    demoAlertScenarios,
+    setDemoAlertScenarios,
+    alertSettings,
+    updateAlertSettings,
   };
 }

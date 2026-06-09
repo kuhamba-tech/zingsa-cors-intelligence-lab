@@ -175,6 +175,68 @@ export async function fetchSolarActivity() {
   };
 }
 
+function formatUtcShort(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 16)}`;
+}
+
+/** NASA DONKI CME rows for the enhanced CME table. */
+export function buildDonkiCmeRows(cmes = []) {
+  return (cmes || []).slice(0, 8).map((cme) => {
+    const analysis = cme.cmeAnalyses?.find(a => a.isMostAccurate) || cme.cmeAnalyses?.[0];
+    const halfAngle = Number(analysis?.halfAngle);
+    const halo = halfAngle >= 360 ? 'Yes' : halfAngle >= 120 ? 'Partial' : 'No';
+    const linked = Array.isArray(cme.linkedEvents) && cme.linkedEvents.length > 0;
+    return {
+      date: formatUtcShort(cme.startTime),
+      speed: analysis?.speed ? Math.round(Number(analysis.speed)) : '—',
+      width: Number.isFinite(halfAngle) ? `${halfAngle}°` : '—',
+      halo,
+      impact: linked ? 'Possible' : halfAngle >= 120 ? 'Possible' : 'Unlikely',
+      id: cme.activityID || cme.catalog || 'CME',
+    };
+  });
+}
+
+/** Active regions inferred from DONKI flare source locations. */
+export function buildDonkiActiveRegions(flares = []) {
+  const map = new Map();
+  for (const flare of flares || []) {
+    const id = flare.activeRegionNum
+      ? `AR ${flare.activeRegionNum}`
+      : flare.sourceLocation
+        ? `AR ${flare.sourceLocation}`
+        : flare.flrID;
+    if (!id) continue;
+    const letter = String(flare.classType || 'A')[0];
+    const cls = letter === 'X' || letter === 'M' ? 'Beta-Gamma' : letter === 'C' ? 'Beta' : 'Alpha';
+    const mag = letter === 'X' || letter === 'M' ? 'BGD' : letter === 'C' ? 'B' : 'A';
+    const current = map.get(id) || { id, cls, mag, spots: 0, latest: flare.classType };
+    current.spots += 1;
+    if (flare.classType && String(flare.classType)[0] >= String(current.latest || 'A')[0]) {
+      current.latest = flare.classType;
+    }
+    map.set(id, current);
+  }
+  return [...map.values()].slice(0, 6);
+}
+
+/** Radio burst proxy rows from recent flares (NOAA does not expose a simple burst table in-app). */
+export function buildDonkiRadioBursts(flares = []) {
+  return (flares || []).slice(0, 6).map((flare) => {
+    const letter = String(flare.classType || 'A')[0];
+    return {
+      time: formatUtcShort(flare.beginTime || flare.peakTime),
+      type: letter === 'M' || letter === 'X' ? 'Type II' : 'Type III',
+      freq: letter === 'X' ? '410 MHz' : letter === 'M' ? '245 MHz' : '150 MHz',
+      intensity: letter === 'X' ? 'Strong' : letter === 'M' ? 'Moderate' : 'Weak',
+      loc: flare.sourceLocation || '—',
+    };
+  });
+}
+
 export function getDemoSolarActivity() {
   const hour = new Date().getUTCHours();
   const base = 1.2e-6 + Math.abs(Math.sin(hour * 0.7)) * 2.8e-6;

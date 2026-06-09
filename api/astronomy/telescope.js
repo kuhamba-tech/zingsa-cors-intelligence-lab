@@ -195,7 +195,10 @@ export default async function handler(req, res) {
     const defaultObject = SKY_OBJECTS[0];
     return res.status(200).json({
       success: true,
+      mode: 'simulated',
       provider: 'ZINGSA Telescope Simulator API',
+      catalog_note: 'Southern-sky teaching catalog — pointing math is local, not a live mount',
+      catalog_count: SKY_OBJECTS.length,
       location: { ...DEFAULT_OBS, lat, lon },
       telescope: {
         model: 'Simulated 0.6 m Ritchey–Chrétien',

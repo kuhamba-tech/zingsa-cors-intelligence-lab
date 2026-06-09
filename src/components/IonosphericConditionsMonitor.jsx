@@ -1,28 +1,25 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Waves } from 'lucide-react';
+import OperationalServicesNav from './OperationalServicesNav.jsx';
 import { getIonosphereStatus } from '../services/corsApi.js';
-import { IONOSPHERE_MONITOR_STATIONS } from '../utils/corsNetworkData.js';
+import { useOpsHealth } from '../context/OpsHealthContext.jsx';
+import { ZIMBABWE_CORS_STATIONS } from '../data/zimbabweCorsStations.js';
+import { healthTelemetryLabel } from '../utils/corsNetworkData.js';
 import '../styles/ionospheric-conditions.css';
 
-const FALLBACK_STATIONS = IONOSPHERE_MONITOR_STATIONS.map((ref, i) => ({
+const FALLBACK_STATIONS = ZIMBABWE_CORS_STATIONS.map((ref, i) => ({
   id: ref.id.replace(/_$/, ''),
-  name: ref.name,
-  vtec: 16 + i * 2,
-  s4: 0.18 + i * 0.08,
-  delay: 6 + i,
-  error: 2 + i * 0.3,
-  rtk: i === 2 ? 'FLOAT' : 'FIXED',
-  ppp: i === 2 ? 'Delayed' : 'Normal',
-  quality: i === 2 ? 'MODERATE' : 'LOW',
+  name: ref.name.split(' (')[0],
+  vtec: +(14 + (i % 6) * 1.8).toFixed(1),
+  s4: +(0.12 + (i % 5) * 0.06).toFixed(2),
+  delay: +(6 + (i % 4)).toFixed(1),
+  error: +(2 + (i % 3) * 0.4).toFixed(1),
+  rtk: i % 7 === 0 ? 'FLOAT' : 'FIXED',
+  ppp: i % 5 === 0 ? 'Delayed' : 'Normal',
+  quality: i % 6 === 0 ? 'MODERATE' : 'LOW',
+  data_source: 'offline-fallback',
 }));
-
-// ── GNSS signal performance per frequency ──
-const GNSS_PERFORMANCE = [
-  { name: 'GPS',     color: '#22c55e', l1: 'LOW', l2: 'LOW',      l5: 'LOW' },
-  { name: 'Galileo', color: '#22d3ee', l1: 'LOW', l2: 'LOW',      l5: 'LOW' },
-  { name: 'BeiDou',  color: '#f97316', l1: 'LOW', l2: 'MODERATE', l5: 'LOW' },
-  { name: 'GLONASS', color: '#a855f7', l1: 'LOW', l2: 'LOW',      l5: null  },
-];
 
 const IMPACT_GUIDE = [
   { level: 'Low',      label: 'Minimal Impact',  color: '#22c55e' },
@@ -47,6 +44,167 @@ function impactColor(level) {
   if (l === 'HIGH')     return '#f97316';
   if (l === 'MODERATE') return '#eab308';
   return '#22c55e';
+}
+
+function levelFromKp(kp) {
+  if (kp >= 5) return { label: 'Storm', color: '#ef4444', level: 'SEVERE' };
+  if (kp >= 4) return { label: 'Active', color: '#f97316', level: 'HIGH' };
+  if (kp >= 3) return { label: 'Unsettled', color: '#eab308', level: 'MODERATE' };
+  return { label: 'Quiet', color: '#22c55e', level: 'LOW' };
+}
+
+function levelFromVtec(vtec) {
+  if (vtec >= 25) return { label: 'Elevated', color: '#f97316', level: 'HIGH' };
+  if (vtec >= 15) return { label: 'Moderate', color: '#eab308', level: 'MODERATE' };
+  return { label: 'Low', color: '#22c55e', level: 'LOW' };
+}
+
+function levelFromS4(s4) {
+  if (s4 >= 0.5) return { label: 'High', color: '#ef4444', level: 'HIGH' };
+  if (s4 >= 0.2) return { label: 'Moderate', color: '#eab308', level: 'MODERATE' };
+  return { label: 'Low', color: '#22c55e', level: 'LOW' };
+}
+
+function buildTrendSeries(current, amplitude = 4, points = 25) {
+  const end = Number(current) || 0;
+  return Array.from({ length: points }, (_, i) => {
+    const drift = (i - (points - 1)) * (amplitude / points);
+    const wave = Math.sin(i / 3) * (amplitude * 0.35);
+    const crest = Math.max(0, 9 - Math.abs(i - 13)) * (amplitude * 0.2);
+    return +(Math.max(0, end + drift + wave + crest - amplitude * 0.45)).toFixed(2);
+  });
+}
+
+function deriveIonosphereView(status, health) {
+  const vtec = Number(status.vtec_tecu) || 0;
+  const s4 = Number(status.s4_index) || 0;
+  const kp = Number(status.kp_index) || 0;
+  const deltaTec = Number(status.tec_daily_change) || 0;
+  const stations = status.stations?.length ? status.stations : FALLBACK_STATIONS;
+  const fixedCount = stations.filter(s => s.rtk === 'FIXED').length;
+  const fixRate = +((fixedCount / stations.length) * 100).toFixed(1);
+  const gnssImpact = String(status.gnss_impact || 'LOW').toUpperCase();
+  const condition = levelFromKp(kp);
+  const tecActivity = levelFromVtec(vtec);
+  const scintRisk = levelFromS4(s4);
+  const stormRisk = kp >= 5
+    ? { label: 'High', color: '#ef4444', level: 'HIGH' }
+    : kp >= 4
+      ? { label: 'Moderate', color: '#eab308', level: 'MODERATE' }
+      : { label: 'Low', color: '#22c55e', level: 'LOW' };
+  const rtkReliability = status.rtk_status === 'FIXED' && fixRate >= 75
+    ? { label: 'Normal', color: '#22c55e' }
+    : status.rtk_status === 'FLOAT'
+      ? { label: 'Degraded', color: '#eab308' }
+      : { label: 'At Risk', color: '#ef4444' };
+  const roti = +(Math.max(0.02, s4 * 0.55 + Math.abs(deltaTec) * 0.04)).toFixed(2);
+  const rotiLevel = roti >= 0.5
+    ? { label: 'HIGH', color: '#ef4444', note: 'Disturbance detected' }
+    : roti >= 0.25
+      ? { label: 'MODERATE', color: '#eab308', note: 'Elevated variability' }
+      : { label: 'LOW', color: '#22c55e', note: 'None detected' };
+  const eiaActive = vtec >= 14 || s4 >= 0.18;
+  const zimEffect = gnssImpact === 'SEVERE' || gnssImpact === 'HIGH'
+    ? { label: 'High', color: '#ef4444' }
+    : gnssImpact === 'MODERATE' || scintRisk.level === 'MODERATE'
+      ? { label: 'Moderate', color: '#eab308' }
+      : { label: 'Low', color: '#22c55e' };
+  const bump = (base, offset) => {
+    const order = ['LOW', 'MODERATE', 'HIGH', 'SEVERE'];
+    const idx = Math.min(order.length - 1, Math.max(0, order.indexOf(base) + offset));
+    return order[idx];
+  };
+  const gnssPerformance = [
+    { name: 'GPS', color: '#22c55e', l1: gnssImpact, l2: gnssImpact, l5: bump(gnssImpact, -1) },
+    { name: 'Galileo', color: '#22d3ee', l1: bump(gnssImpact, -1), l2: gnssImpact, l5: bump(gnssImpact, -1) },
+    { name: 'BeiDou', color: '#f97316', l1: gnssImpact, l2: bump(gnssImpact, 1), l5: gnssImpact },
+    { name: 'GLONASS', color: '#a855f7', l1: gnssImpact, l2: gnssImpact, l5: null },
+  ];
+  const forecastStep = (baseLevel, step) => {
+    const order = ['LOW', 'MODERATE', 'HIGH', 'SEVERE'];
+    const idx = order.indexOf(baseLevel);
+    const next = order[Math.min(order.length - 1, Math.max(0, idx + step))];
+    const short = next === 'MODERATE' ? 'Mod' : next === 'SEVERE' ? 'Sev' : next.charAt(0) + next.slice(1).toLowerCase();
+    return { color: next, text: short };
+  };
+  const tecNow = tecActivity.level;
+  const s4Now = scintRisk.level;
+  const rtkNow = status.rtk_status === 'FIXED' ? 'LOW' : status.rtk_status === 'FLOAT' ? 'MODERATE' : 'HIGH';
+  const forecastRows = [
+    {
+      label: 'TEC Level',
+      colors: ['LOW', 'LOW', 'MODERATE', 'LOW'].map((_, i) => forecastStep(tecNow, i === 2 ? 1 : 0).color),
+      texts: ['Now', '+6h', '+12h', '+24h'].map((_, i) => forecastStep(tecNow, i === 2 ? 1 : 0).text),
+    },
+    {
+      label: 'S4 Scintillation',
+      colors: ['LOW', 'LOW', 'MODERATE', 'HIGH'].map((_, i) => forecastStep(s4Now, i >= 2 ? 1 : 0).color),
+      texts: ['Now', '+6h', '+12h', '+24h'].map((_, i) => forecastStep(s4Now, i >= 2 ? 1 : 0).text),
+    },
+    {
+      label: 'RTK Status',
+      colors: [rtkNow, rtkNow, rtkNow, bump(rtkNow, 1)],
+      texts: ['Now', '+6h', '+12h', '+24h'].map((_, i) => {
+        if (i < 3) return status.rtk_status === 'FIXED' ? 'OK' : status.rtk_status;
+        return rtkNow === 'LOW' ? 'OK' : 'WARN';
+      }),
+    },
+    {
+      label: 'GNSS Impact',
+      colors: [gnssImpact, gnssImpact, bump(gnssImpact, 1), gnssImpact],
+      texts: [0, 0, 1, 0].map(step => {
+        const level = step ? bump(gnssImpact, 1) : gnssImpact;
+        return level === 'MODERATE' ? 'Mod' : level.charAt(0) + level.slice(1).toLowerCase();
+      }),
+    },
+  ];
+  const monitorIds = new Set(stations.map(s => s.id));
+  const healthStations = (health?.stations || []).filter(s => monitorIds.has(s.station_id?.replace(/_$/, '')));
+  const onlineCount = healthStations.filter(s => s.status === 'ONLINE').length;
+  const networkLabel = healthStations.length
+    ? onlineCount === healthStations.length
+      ? 'All CORS Online'
+      : `${onlineCount}/${healthStations.length} CORS Online`
+    : fixedCount === stations.length ? 'All Stations FIXED' : `${fixedCount}/${stations.length} Stations FIXED`;
+  const networkColor = onlineCount === healthStations.length || fixedCount === stations.length ? '#22c55e' : '#eab308';
+  const alertLevel = scintRisk.level === 'HIGH' || gnssImpact === 'SEVERE'
+    ? 'HIGH'
+    : scintRisk.level === 'MODERATE' || gnssImpact === 'HIGH'
+      ? 'MODERATE'
+      : 'LOW';
+  const alertEffects = alertLevel === 'HIGH'
+    ? ['Signal loss of lock likely', 'RTK float or no-fix periods', 'PPP convergence delays']
+    : alertLevel === 'MODERATE'
+      ? ['RTK initialization delay', 'Increased positioning errors', 'Signal fading after dusk']
+      : ['Routine surveying conditions', 'Monitor evening equatorial window', 'No active ionospheric warning'];
+  const nextForecastUpdate = new Date();
+  nextForecastUpdate.setUTCHours(Math.ceil((nextForecastUpdate.getUTCHours() + 1) / 6) * 6, 0, 0, 0);
+
+  return {
+    condition,
+    tecActivity,
+    scintRisk,
+    stormRisk,
+    rtkReliability,
+    roti,
+    rotiLevel,
+    eiaActive,
+    zimEffect,
+    gnssPerformance,
+    forecastRows,
+    networkLabel,
+    networkColor,
+    fixRate,
+    alertLevel,
+    alertEffects,
+    pppStatus: gnssImpact === 'LOW' ? 'Normal' : gnssImpact === 'MODERATE' ? 'Delayed' : 'Degraded',
+    correctionStatus: gnssImpact === 'SEVERE' ? 'Limited' : 'Available',
+    nextForecastUpdate: hhmm(nextForecastUpdate.toISOString()),
+    tecTrend: buildTrendSeries(vtec, 5),
+    scintTrend: buildTrendSeries(s4, 0.12),
+    delayTrend: buildTrendSeries(status.ionospheric_delay_l1_ns, 3),
+    phaseTrend: buildTrendSeries(status.phase_sigma_rad, 0.08),
+  };
 }
 
 function utcTime(iso) {
@@ -155,22 +313,203 @@ function tecToRGB(tec) {
 }
 
 function getTECValue(lat, lon) {
-  // Equatorial ionization anomaly: peak ~5°N, broad east-west band
   const mainPeak = 78 * Math.exp(-Math.pow(lat - 5, 2) / 220)
                      * Math.exp(-Math.pow(lon - 5, 2) / 3200);
   const baseline = 22 * Math.exp(-Math.pow(lat - 5, 2) / 600);
   return Math.min(80, Math.max(0, mainPeak + baseline));
 }
 
+function getROTIValue(lat, lon) {
+  const eia = Math.exp(-Math.pow(lat - 5, 2) / 200)
+            * Math.exp(-Math.pow(lon - 12, 2) / 2800);
+  const turbulence = 0.03 + eia * 0.42 + 0.04 * Math.abs(Math.sin(lon * 0.12));
+  return Math.min(0.55, Math.max(0, turbulence));
+}
+
+function getScintillationValue(lat, lon) {
+  const equatorial = Math.exp(-Math.pow(lat, 2) / 110);
+  const sector = 0.55 + 0.45 * Math.sin((lon + 25) * 0.09);
+  return Math.min(1, Math.max(0, 0.04 + equatorial * 0.62 * sector));
+}
+
+function getGnssDelayValue(lat, lon) {
+  return (getTECValue(lat, lon) / 80) * 45;
+}
+
+function constellationWeight(lat, consts) {
+  let w = 0;
+  if (consts.GPS) w += 0.28;
+  if (consts.Galileo) w += 0.24;
+  if (consts.BeiDou) w += 0.26 * (lat > -15 ? 1.08 : 0.82);
+  if (consts.GLONASS) w += 0.22 * (lat > 5 ? 1.05 : 0.9);
+  return Math.max(0.3, w);
+}
+
 const MAP_LAYERS = ['VTEC', 'ROTI', 'Scintillation', 'GNSS Delay'];
 const CONSTELLATIONS = ['GPS', 'Galileo', 'BeiDou', 'GLONASS'];
 
-function TecMap() {
-  const [layer,  setLayer]  = useState('VTEC');
-  const [consts, setConsts] = useState({ GPS: true, Galileo: true, BeiDou: true, GLONASS: true });
+const LAYER_META = {
+  VTEC: {
+    unit: 'TECU',
+    max: 80,
+    ticks: [80, 60, 40, 20, 0],
+    legend: [
+      { label: 'Low (0-10)', color: '#003acc' },
+      { label: 'Moderate (10-30)', color: '#00cc88' },
+      { label: 'High (30-60)', color: '#ffcc00' },
+      { label: 'Very High (>60)', color: '#ff2200' },
+    ],
+    getValue: getTECValue,
+  },
+  ROTI: {
+    unit: 'ROTI',
+    max: 0.5,
+    ticks: [0.5, 0.4, 0.3, 0.2, 0.1, 0],
+    legend: [
+      { label: 'Quiet (<0.1)', color: '#003acc' },
+      { label: 'Moderate (0.1-0.2)', color: '#00cc88' },
+      { label: 'Disturbed (0.2-0.35)', color: '#ffcc00' },
+      { label: 'Severe (>0.35)', color: '#ff2200' },
+    ],
+    getValue: getROTIValue,
+  },
+  Scintillation: {
+    unit: 'S4',
+    max: 1,
+    ticks: [1.0, 0.8, 0.6, 0.4, 0.2, 0],
+    legend: [
+      { label: 'Low (<0.2)', color: '#003acc' },
+      { label: 'Moderate (0.2-0.4)', color: '#00cc88' },
+      { label: 'High (0.4-0.7)', color: '#ffcc00' },
+      { label: 'Severe (>0.7)', color: '#ff2200' },
+    ],
+    getValue: getScintillationValue,
+  },
+  'GNSS Delay': {
+    unit: 'ns',
+    max: 45,
+    ticks: [45, 35, 25, 15, 5, 0],
+    legend: [
+      { label: 'Low (<8 ns)', color: '#003acc' },
+      { label: 'Moderate (8-18 ns)', color: '#00cc88' },
+      { label: 'High (18-32 ns)', color: '#ffcc00' },
+      { label: 'Very High (>32 ns)', color: '#ff2200' },
+    ],
+    getValue: getGnssDelayValue,
+  },
+};
+
+function formatColorbarTick(val, layer) {
+  if (layer === 'ROTI') return val.toFixed(1);
+  if (layer === 'Scintillation') return val.toFixed(1);
+  return String(Math.round(val));
+}
+
+function buildIonosphereAnalysis(status, stations, primaryStation, primaryName, mapLayer, mapConsts) {
+  const vtec = Number(status.vtec_tecu) || 0;
+  const s4 = Number(status.s4_index) || 0;
+  const kp = Number(status.kp_index) || 0;
+  const delay = Number(status.ionospheric_delay_l1_ns) || 0;
+  const rangeErr = Number(status.range_error_m) || 0;
+  const activeConsts = CONSTELLATIONS.filter(c => mapConsts[c]);
+  const fixedCount = stations.filter(s => s.rtk === 'FIXED').length;
+  const floatStation = stations.find(s => s.rtk !== 'FIXED');
+  const highestS4 = [...stations].sort((a, b) => b.s4 - a.s4)[0];
+
+  const vtecLevel = vtec < 15 ? 'low' : vtec < 25 ? 'moderate' : 'elevated';
+  const s4Level = s4 < 0.2 ? 'low' : s4 < 0.5 ? 'moderate' : 'high';
+  const kpLevel = kp < 2 ? 'quiet' : kp < 4 ? 'unsettled' : 'active';
+
+  const headline = kpLevel === 'quiet' && s4Level !== 'high'
+    ? 'Equatorial ionosphere is generally stable with localized evening scintillation risk'
+    : kpLevel === 'active' || s4Level === 'high'
+      ? 'Ionospheric disturbance is elevating GNSS and CORS positioning risk'
+      : 'Mixed ionospheric conditions — monitor equatorial crest activity through the evening';
+
+  const mapSummaries = {
+    VTEC: 'The Africa map shows the equatorial TEC crest crossing central Africa, with highest electron density near the geomagnetic equator.',
+    ROTI: 'ROTI highlights turbulence along the equatorial ionization anomaly belt — rapid TEC changes are most likely across low-latitude CORS baselines.',
+    Scintillation: 'The scintillation layer shows where amplitude fading is most probable after dusk across southern and equatorial Africa.',
+    'GNSS Delay': 'GNSS delay follows the TEC distribution — longer L1 delays align with the equatorial crest over Zimbabwe and neighbouring states.',
+  };
+  const mapSummary = mapSummaries[mapLayer] || mapSummaries.VTEC;
+
+  return {
+    headline,
+    summary: `Monitoring at ${primaryStation} (${primaryName}) reports VTEC ${vtec.toFixed(1)} TECU (${vtecLevel}), S4 ${s4.toFixed(2)} (${s4Level}), and Kp ${kp.toFixed(1)} (${kpLevel}). Zenith L1 delay is ${delay.toFixed(1)} ns with an estimated range error of ${rangeErr.toFixed(1)} m.`,
+    mapSummary,
+    constellationNote: activeConsts.length === CONSTELLATIONS.length
+      ? 'All four GNSS constellations are included in the current map view.'
+      : `Map view weights ${activeConsts.join(', ')} — disable constellations to see how coverage changes across the network.`,
+    networkNote: fixedCount === stations.length
+      ? `All ${stations.length} ZimCORS stations are holding RTK FIXED solutions.`
+      : `${fixedCount} of ${stations.length} stations are FIXED${floatStation ? `; ${floatStation.id} (${floatStation.name}) is on ${floatStation.rtk}` : ''}. Highest S4 is at ${highestS4?.id || primaryStation} (${highestS4?.s4?.toFixed?.(2) ?? s4.toFixed(2)}).`,
+    eiaNote: 'The Equatorial Ionization Anomaly is active, with peak disturbance expected between 18:00 and 23:00 UTC over southern Africa.',
+    recommendations: [
+      s4Level !== 'low' ? 'Verify RTK fixes during evening operations and allow extra convergence time after sunset.' : 'RTK and PPP services are operating within normal limits for daytime surveying.',
+      vtecLevel === 'elevated' ? 'Apply ionospheric-aware processing — longer baselines may need additional TEC modelling.' : 'Current TEC levels support routine CORS corrections and NTRIP streaming.',
+      kpLevel !== 'quiet' ? `Geomagnetic activity (Kp ${kp.toFixed(1)}) may add modest delay and scintillation beyond the equatorial crest.` : 'Geomagnetic conditions are quiet and are not amplifying equatorial disturbances.',
+      'Cross-check the TEC map layer against ROTI and scintillation views before planning precision mapping after dusk.',
+    ],
+    outlook: 'The 24-hour forecast shows moderate scintillation risk building toward +12h while TEC and RTK status remain acceptable for most daylight operations.',
+    dataMode: status.mode === 'live'
+      ? `Analysis uses NOAA Kp, ${status.archive_backed_count ?? stations.filter(s => s.archive_backed).length}/${status.station_count ?? stations.length} RINEX-backed station models, and climatology for gaps.`
+      : 'Offline fallback — refresh when /api/ionosphere/status is reachable.',
+  };
+}
+
+function IonospherePageAnalysis({ status, stations, primaryStation, primaryName, mapLayer, mapConsts }) {
+  const analysis = useMemo(
+    () => buildIonosphereAnalysis(status, stations, primaryStation, primaryName, mapLayer, mapConsts),
+    [status, stations, primaryStation, primaryName, mapLayer, mapConsts],
+  );
+
+  return (
+    <section className="icm2-analysis-section">
+      <div className="icm2-analysis-head">
+        <div>
+          <div className="icm2-analysis-kicker">Live interpretation</div>
+          <h2 className="icm2-analysis-title">What is happening now</h2>
+        </div>
+        <code className="icm2-analysis-api">GET /api/ionosphere/status</code>
+      </div>
+      <p className="icm2-analysis-headline">{analysis.headline}</p>
+      <p className="icm2-analysis-copy">{analysis.summary}</p>
+      <div className="icm2-analysis-grid">
+        <article className="icm2-analysis-card">
+          <h3>Africa map ({mapLayer})</h3>
+          <p>{analysis.mapSummary}</p>
+        </article>
+        <article className="icm2-analysis-card">
+          <h3>CORS network</h3>
+          <p>{analysis.networkNote}</p>
+          <p>{analysis.constellationNote}</p>
+        </article>
+        <article className="icm2-analysis-card">
+          <h3>EIA &amp; evening window</h3>
+          <p>{analysis.eiaNote}</p>
+          <p>{analysis.outlook}</p>
+        </article>
+      </div>
+      <div className="icm2-analysis-recs">
+        <h3>Operational guidance</h3>
+        <ul>
+          {analysis.recommendations.map(item => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
+      <p className="icm2-analysis-foot">{analysis.dataMode}</p>
+    </section>
+  );
+}
+
+function TecMap({ layer, setLayer, consts, setConsts }) {
   const canvasRef = useRef(null);
 
   const toggle = name => setConsts(c => ({ ...c, [name]: !c[name] }));
+
+  const layerMeta = LAYER_META[layer] || LAYER_META.VTEC;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -179,57 +518,53 @@ function TecMap() {
     const W = canvas.width;
     const H = canvas.height;
     const mapW = W - CB;
-    const PAD_B = 18; // bottom padding for lon labels
+    const PAD_B = 18;
+    const meta = LAYER_META[layer] || LAYER_META.VTEC;
+    const { max, ticks, unit, getValue } = meta;
 
-    // 1. Dark background
     ctx.fillStyle = '#020c1a';
     ctx.fillRect(0, 0, W, H);
 
-    // 2. TEC heatmap in the map area only (x ≥ CB)
     const img  = ctx.createImageData(mapW, H - PAD_B);
     const data = img.data;
     for (let py = 0; py < H - PAD_B; py++) {
       for (let px = 0; px < mapW; px++) {
         const lat = MAP_LAT_MAX - (py / (H - PAD_B)) * (MAP_LAT_MAX - MAP_LAT_MIN);
         const lon = MAP_LON_MIN + (px / mapW) * (MAP_LON_MAX - MAP_LON_MIN);
-        const [r, g, b] = tecToRGB(getTECValue(lat, lon));
+        const raw = getValue(lat, lon) * constellationWeight(lat, consts);
+        const scaled = (Math.min(max, Math.max(0, raw)) / max) * 80;
+        const [r, g, b] = tecToRGB(scaled);
         const i = (py * mapW + px) * 4;
         data[i] = r; data[i+1] = g; data[i+2] = b; data[i+3] = 230;
       }
     }
     ctx.putImageData(img, CB, 0);
 
-    // 3. Colorbar (left side: x 4–20, full map height)
     const cbTop = 10; const cbBot = H - PAD_B - 8;
     const cbH   = cbBot - cbTop;
     for (let py = cbTop; py < cbBot; py++) {
-      const tec = 80 * (1 - (py - cbTop) / cbH);
-      const [r, g, b] = tecToRGB(tec);
+      const norm = 80 * (1 - (py - cbTop) / cbH);
+      const [r, g, b] = tecToRGB(norm);
       ctx.fillStyle = `rgb(${r},${g},${b})`;
       ctx.fillRect(4, py, 14, 1);
     }
-    // Colorbar border
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 0.5;
     ctx.strokeRect(4, cbTop, 14, cbH);
 
-    // Colorbar labels
     ctx.font      = 'bold 9px Inter,system-ui,sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.textAlign = 'left';
-    [80, 60, 40, 20, 0].forEach(val => {
-      const y = cbTop + (1 - val / 80) * cbH;
-      // tick
+    ticks.forEach(val => {
+      const y = cbTop + (1 - val / max) * cbH;
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.fillRect(18, y - 0.5, 4, 1);
-      // label
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.fillText(String(val), 24, y + 3.5);
+      ctx.fillText(formatColorbarTick(val, layer), 24, y + 3.5);
     });
-    // "TECU" label at top of colorbar
     ctx.font = 'bold 8px Inter,system-ui,sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.fillText('TECU', 2, cbTop - 2);
+    ctx.fillText(unit, 2, cbTop - 2);
 
     // 4. Grid lines (dashed, in map area)
     ctx.setLineDash([2, 5]);
@@ -276,7 +611,7 @@ function TecMap() {
       const [x] = llToCanvas(0, lon, W, H);
       ctx.fillText(label, x, H - 4);
     });
-  }, [layer]);
+  }, [layer, consts]);
 
   return (
     <div>
@@ -315,12 +650,7 @@ function TecMap() {
           className="icm2-tec-canvas"
         />
         <div className="icm2-tec-legend">
-          {[
-            { label: 'Low (0-10)',       color: '#003acc' },
-            { label: 'Moderate (10-30)', color: '#00cc88' },
-            { label: 'High (30-60)',     color: '#ffcc00' },
-            { label: 'Very High (>60)',  color: '#ff2200' },
-          ].map(item => (
+          {layerMeta.legend.map(item => (
             <span key={item.label} className="icm2-legend-item">
               <i style={{ background: item.color }} />{item.label}
             </span>
@@ -353,14 +683,20 @@ function demoData() {
 }
 
 export default function IonosphericConditionsMonitor() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { healthPayload: health, refresh: refreshHealth } = useOpsHealth();
   const [status, setStatus]   = useState(demoData);
   const [loading, setLoading] = useState(true);
+  const [selectedStation, setSelectedStation] = useState(() => searchParams.get('station')?.toUpperCase() || 'HARA');
+  const [mapLayer, setMapLayer] = useState('VTEC');
+  const [mapConsts, setMapConsts] = useState({ GPS: true, Galileo: true, BeiDou: true, GLONASS: true });
 
-  const loadStatus = async () => {
+  const loadStatus = async (stationId = selectedStation) => {
     setLoading(true);
     try {
-      const json = await getIonosphereStatus({ station: 'HARA' });
+      const json = await getIonosphereStatus({ station: stationId });
       setStatus({ ...demoData(), ...json, mode: json.mode || 'live' });
+      if (json.station) setSelectedStation(json.station);
     } catch {
       setStatus(demoData());
     } finally {
@@ -368,28 +704,36 @@ export default function IonosphericConditionsMonitor() {
     }
   };
 
-  useEffect(() => {
-    loadStatus();
-    const id = setInterval(loadStatus, 10 * 60 * 1000);
-    return () => clearInterval(id);
-  }, []);
+  const refreshAll = () => {
+    refreshHealth();
+    loadStatus(selectedStation);
+  };
 
   const corsStations = status.stations?.length ? status.stations : FALLBACK_STATIONS;
+
+  useEffect(() => {
+    loadStatus(selectedStation);
+    const id = setInterval(() => loadStatus(selectedStation), 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [selectedStation]);
+
+  useEffect(() => {
+    const urlStation = searchParams.get('station')?.toUpperCase();
+    if (!urlStation || urlStation === selectedStation) return;
+    const known = corsStations.some(s => s.id === urlStation);
+    if (known) setSelectedStation(urlStation);
+  }, [searchParams, selectedStation, corsStations]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedStation && selectedStation !== 'HARA') params.set('station', selectedStation);
+    const next = params.toString();
+    if (next !== searchParams.toString()) setSearchParams(params, { replace: true });
+  }, [selectedStation, setSearchParams, searchParams]);
   const stationPos = status.positions || STATION_POS;
-  const primaryStation = status.station || 'HARA';
+  const primaryStation = status.station || selectedStation || 'HARA';
   const primaryName = corsStations.find(s => s.id === primaryStation)?.name || 'Harare';
-
-  const tecTrend   = useMemo(() => Array.from({ length: 25 }, (_, i) => 11 + Math.sin(i / 3) * 5 + Math.max(0, 9 - Math.abs(i - 13)) * 1.7), []);
-  const scintTrend = useMemo(() => Array.from({ length: 25 }, (_, i) => 0.18 + Math.max(0, 8 - Math.abs(i - 15)) * 0.075 + Math.sin(i) * 0.035), []);
-  const delayTrend = useMemo(() => tecTrend.map(v => v * 0.43), [tecTrend]);
-  const phaseTrend = useMemo(() => scintTrend.map(v => v * 1.15), [scintTrend]);
-
-  const FORECAST_ROWS = [
-    { label: 'TEC Level',        colors: ['LOW','LOW','MODERATE','LOW'],      texts: ['Low','Low','Mod','Low'] },
-    { label: 'S4 Scintillation', colors: ['LOW','LOW','MODERATE','HIGH'],     texts: ['Low','Low','Mod','High'] },
-    { label: 'RTK Status',       colors: ['LOW','LOW','LOW','MODERATE'],      texts: ['OK', 'OK', 'OK','WARN'] },
-    { label: 'GNSS Impact',      colors: ['LOW','LOW','MODERATE','LOW'],      texts: ['Low','Low','Mod','Low'] },
-  ];
+  const view = useMemo(() => deriveIonosphereView(status, health), [status, health]);
 
   return (
     <div className="icm2-root">
@@ -398,13 +742,14 @@ export default function IonosphericConditionsMonitor() {
         {/* ── Header ── */}
         <header className="icm2-header">
           <div className="icm2-header-title">
-            <h1>IONOSPHERIC CONDITIONS MONITOR</h1>
+            <div className="icm2-header-kicker">ZINGSA Space Science Operations</div>
+            <h1>Ionospheric Conditions Monitor</h1>
             <p>Real-time monitoring of ionospheric disturbances, GNSS signal propagation, and positioning accuracy across CORS networks.</p>
           </div>
           <div className="icm2-header-right">
             <span className="icm2-live-badge">
               <i className="icm2-live-dot" />
-              {status.mode === 'live' ? 'Live Monitoring' : 'Operational Data Stream'}
+              {status.mode === 'archive-blend' ? 'Archive + NOAA Kp' : status.mode === 'live' ? 'Live Monitoring' : 'Climatology Model'}
             </span>
             <div className="icm2-sources">
               <span>Data Sources:</span>
@@ -413,10 +758,41 @@ export default function IonosphericConditionsMonitor() {
               ))}
             </div>
             <span className="icm2-timestamp">{utcTime(status.updated_utc)}</span>
+            <Link
+              to={`/cors?station=${primaryStation}&app=cors-health`}
+              className="icm2-cors-link"
+              title="Open station in National CORS Services"
+            >
+              National CORS →
+            </Link>
+            <Link to="/weather?region=southern" className="icm2-cors-link icm2-weather-link" title="Open Space Weather monitor">
+              Space Weather →
+            </Link>
+            <Link
+              to={primaryStation ? `/alerts?tab=stations&station=${primaryStation}` : '/alerts'}
+              className="icm2-cors-link icm2-alerts-link"
+              title="Open CORS Alert System for this station"
+            >
+              Alerts →
+            </Link>
+            <label className="icm2-station-select">
+              <span>Station</span>
+              <select
+                value={primaryStation}
+                onChange={(e) => setSelectedStation(e.target.value)}
+                aria-label="Select ZimCORS station"
+              >
+                {corsStations.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.id} — {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               className="icm2-refresh-btn"
-              onClick={loadStatus}
+              onClick={refreshAll}
               disabled={loading}
               title="Refresh"
             >
@@ -424,6 +800,23 @@ export default function IonosphericConditionsMonitor() {
             </button>
           </div>
         </header>
+
+        <OperationalServicesNav variant="cyan" stationId={primaryStation} />
+
+        {(status.archive_backed_count != null || health || status.data_blend) && (
+          <div className="icm2-data-banner">
+            {status.data_blend || (
+              <>
+                {status.station_count ?? corsStations.length} ZimCORS stations ·{' '}
+                {status.archive_backed_count ?? corsStations.filter(s => s.archive_backed).length} RINEX-backed
+              </>
+            )}
+            {' · '}
+            {status.mode === 'archive-blend' ? 'Archive + NOAA Kp' : status.mode === 'live' ? 'Live API' : 'Climatology model'}
+            {health ? ` · ${healthTelemetryLabel(health)}` : ''}
+            {status.updated_utc ? ` · updated ${utcTime(status.updated_utc)} UTC` : ''}
+          </div>
+        )}
 
         <div className="icm2-content">
 
@@ -439,10 +832,10 @@ export default function IonosphericConditionsMonitor() {
                   <div className="icm2-globe-core" />
                 </div>
                 <div className="icm2-status-rows">
-                  <div className="icm2-kv"><span>Condition</span><strong style={{ color: '#22c55e' }}>Quiet</strong></div>
-                  <div className="icm2-kv"><span>TEC Activity</span><strong style={{ color: '#eab308' }}>Moderate</strong></div>
-                  <div className="icm2-kv"><span>GNSS Impact</span><strong style={{ color: '#22c55e' }}>Low</strong></div>
-                  <div className="icm2-kv"><span>RTK Reliability</span><strong style={{ color: '#22c55e' }}>Normal</strong></div>
+                  <div className="icm2-kv"><span>Condition</span><strong style={{ color: view.condition.color }}>{view.condition.label}</strong></div>
+                  <div className="icm2-kv"><span>TEC Activity</span><strong style={{ color: view.tecActivity.color }}>{view.tecActivity.label}</strong></div>
+                  <div className="icm2-kv"><span>GNSS Impact</span><strong style={{ color: impactColor(status.gnss_impact) }}>{status.gnss_impact}</strong></div>
+                  <div className="icm2-kv"><span>RTK Reliability</span><strong style={{ color: view.rtkReliability.color }}>{view.rtkReliability.label}</strong></div>
                 </div>
               </div>
             </article>
@@ -475,7 +868,7 @@ export default function IonosphericConditionsMonitor() {
               </div>
               <div className="icm2-kv" style={{ marginTop: 10 }}>
                 <span>Risk</span>
-                <span className="icm2-badge mod">Moderate</span>
+                <span className={`icm2-badge ${view.scintRisk.level === 'MODERATE' ? 'mod' : view.scintRisk.level === 'HIGH' ? 'high' : 'low'}`}>{view.scintRisk.label}</span>
               </div>
             </article>
 
@@ -485,7 +878,7 @@ export default function IonosphericConditionsMonitor() {
               <div className="icm2-kv-stack">
                 <div className="icm2-kv"><span>Zenith Delay (L1)</span><strong>{status.ionospheric_delay_l1_ns.toFixed(1)} <small>ns</small></strong></div>
                 <div className="icm2-kv"><span>Range Error</span><strong>{status.range_error_m.toFixed(1)} <small>m</small></strong></div>
-                <div className="icm2-kv"><span>Correction</span><strong style={{ color: '#22c55e' }}>Available</strong></div>
+                <div className="icm2-kv"><span>Correction</span><strong style={{ color: view.correctionStatus === 'Available' ? '#22c55e' : '#eab308' }}>{view.correctionStatus}</strong></div>
               </div>
             </article>
 
@@ -498,7 +891,7 @@ export default function IonosphericConditionsMonitor() {
                   <strong style={{ color: '#22d3ee', fontSize: '1.55rem', lineHeight: 1 }}>{status.kp_index.toFixed(1)}</strong>
                 </div>
                 <div className="icm2-kv"><span>24h Max</span><strong>{status.kp_24h_max.toFixed(1)}</strong></div>
-                <div className="icm2-kv"><span>Storm Risk</span><strong style={{ color: '#22c55e' }}>Low</strong></div>
+                <div className="icm2-kv"><span>Storm Risk</span><strong style={{ color: view.stormRisk.color }}>{view.stormRisk.label}</strong></div>
               </div>
             </article>
           </div>
@@ -510,7 +903,12 @@ export default function IonosphericConditionsMonitor() {
               <div className="icm2-panel-hdr">
                 <span className="icm2-card-title">AFRICA IONOSPHERIC TEC MAP</span>
               </div>
-              <TecMap />
+              <TecMap
+                layer={mapLayer}
+                setLayer={setMapLayer}
+                consts={mapConsts}
+                setConsts={setMapConsts}
+              />
             </article>
 
             <div className="icm2-charts-col">
@@ -521,7 +919,7 @@ export default function IonosphericConditionsMonitor() {
                 </div>
                 <div className="icm2-chart-yaxis-wrap">
                   <div className="icm2-chart-yaxis"><span>40</span><span>30</span><span>20</span><span>10</span><span>0</span></div>
-                  <TrendChart values={tecTrend} color="#a855f7" height={110} />
+                  <TrendChart values={view.tecTrend} color="#a855f7" height={110} />
                 </div>
                 <p className="icm2-chart-note">Station: {primaryStation} ({primaryName})</p>
               </article>
@@ -535,7 +933,7 @@ export default function IonosphericConditionsMonitor() {
                   <span><i style={{ background: '#eab308' }} />Moderate (0.2-0.5)</span>
                   <span><i style={{ background: '#22c55e' }} />Low (&lt;0.2)</span>
                 </div>
-                <TrendChart values={scintTrend} color="#22c55e" height={100} multiScint />
+                <TrendChart values={view.scintTrend} color="#22c55e" height={100} multiScint />
                 <p className="icm2-chart-note">Station: {primaryStation} ({primaryName})</p>
               </article>
 
@@ -545,7 +943,7 @@ export default function IonosphericConditionsMonitor() {
                 </div>
                 <div className="icm2-chart-yaxis-wrap">
                   <div className="icm2-chart-yaxis sm"><span>15</span><span>10</span><span>5</span><span>0</span></div>
-                  <TrendChart values={delayTrend} color="#22d3ee" height={100} />
+                  <TrendChart values={view.delayTrend} color="#22d3ee" height={100} />
                 </div>
                 <p className="icm2-chart-note">Station: {primaryStation} ({primaryName})</p>
               </article>
@@ -554,7 +952,7 @@ export default function IonosphericConditionsMonitor() {
                 <div className="icm2-panel-hdr">
                   <span className="icm2-card-title">PHASE SCINTILLATION (σφ)</span>
                 </div>
-                <TrendChart values={phaseTrend} color="#f97316" height={100} />
+                <TrendChart values={view.phaseTrend} color="#f97316" height={100} />
                 <p className="icm2-chart-note">Phase sigma: {status.phase_sigma_rad.toFixed(2)} rad</p>
               </article>
 
@@ -568,32 +966,36 @@ export default function IonosphericConditionsMonitor() {
             <article className="icm2-panel">
               <div className="icm2-card-title icm2-panel-mb">EQUATORIAL IONIZATION ANOMALY</div>
               <div className="icm2-eia-status">
-                <span className="icm2-eia-dot" />
+                <span className="icm2-eia-dot" style={{ background: view.eiaActive ? '#f97316' : '#22c55e' }} />
                 <div>
                   <div className="icm2-sub-label">Current Status</div>
-                  <div style={{ color: '#f97316', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.05em' }}>ACTIVE</div>
+                  <div style={{ color: view.eiaActive ? '#f97316' : '#22c55e', fontSize: '1.15rem', fontWeight: 900, letterSpacing: '0.05em' }}>
+                    {view.eiaActive ? 'ACTIVE' : 'QUIET'}
+                  </div>
                 </div>
               </div>
               <div className="icm2-kv-stack" style={{ marginTop: 12 }}>
                 <div className="icm2-kv"><span>Peak Region</span><strong>±15° Magnetic Latitude</strong></div>
-                <div className="icm2-kv"><span>Risk Window</span><strong style={{ color: '#f97316' }}>18:00 – 23:00 UTC</strong></div>
+                <div className="icm2-kv"><span>Risk Window</span><strong style={{ color: view.eiaActive ? '#f97316' : '#64748b' }}>18:00 – 23:00 UTC</strong></div>
                 <div className="icm2-kv"><span>Crest Location</span><strong>~15°N / ~15°S</strong></div>
-                <div className="icm2-kv"><span>Zimbabwe Effect</span><strong style={{ color: '#eab308' }}>Moderate</strong></div>
+                <div className="icm2-kv"><span>Zimbabwe Effect</span><strong style={{ color: view.zimEffect.color }}>{view.zimEffect.label}</strong></div>
               </div>
               <div className="icm2-eia-impact">
                 <Waves size={11} />
-                GNSS Scintillation Possible — RTK users monitor fixes
+                {view.eiaActive
+                  ? 'GNSS Scintillation Possible — RTK users monitor fixes'
+                  : 'Equatorial crest subdued — routine GNSS operations expected'}
               </div>
             </article>
 
             {/* ROTI Monitor */}
             <article className="icm2-panel">
               <div className="icm2-card-title icm2-panel-mb">RATE OF TEC INDEX (ROTI)</div>
-              <div className="icm2-big-value" style={{ color: '#22c55e', fontSize: '2.1rem' }}>0.18</div>
+              <div className="icm2-big-value" style={{ color: view.rotiLevel.color, fontSize: '2.1rem' }}>{view.roti}</div>
               <div className="icm2-big-unit" style={{ marginBottom: 12 }}>TECU / min</div>
               <div className="icm2-kv-stack">
-                <div className="icm2-kv"><span>Activity</span><strong style={{ color: '#22c55e' }}>LOW</strong></div>
-                <div className="icm2-kv"><span>Disturbance</span><strong>None detected</strong></div>
+                <div className="icm2-kv"><span>Activity</span><strong style={{ color: view.rotiLevel.color }}>{view.rotiLevel.label}</strong></div>
+                <div className="icm2-kv"><span>Disturbance</span><strong>{view.rotiLevel.note}</strong></div>
                 <div className="icm2-kv"><span>Alert Threshold</span><strong style={{ color: '#475569' }}>0.5 TECU/min</strong></div>
                 <div className="icm2-kv"><span>Station</span><strong>{primaryStation} ({primaryName})</strong></div>
               </div>
@@ -605,28 +1007,28 @@ export default function IonosphericConditionsMonitor() {
               <div className="icm2-kv-stack">
                 <div className="icm2-kv">
                   <span>RTK Fix Rate</span>
-                  <strong style={{ color: '#22c55e', fontSize: '1.1rem' }}>98.5%</strong>
+                  <strong style={{ color: view.fixRate >= 75 ? '#22c55e' : '#eab308', fontSize: '1.1rem' }}>{view.fixRate}%</strong>
                 </div>
-                <div className="icm2-kv"><span>Avg Correction Age</span><strong>1.2 sec</strong></div>
-                <div className="icm2-kv"><span>PPP Convergence</span><strong style={{ color: '#22c55e' }}>Normal</strong></div>
+                <div className="icm2-kv"><span>Avg Correction Age</span><strong>{status.gnss_impact === 'LOW' ? '1.2' : status.gnss_impact === 'MODERATE' ? '2.4' : '4.8'} sec</strong></div>
+                <div className="icm2-kv"><span>PPP Convergence</span><strong style={{ color: view.pppStatus === 'Normal' ? '#22c55e' : '#eab308' }}>{view.pppStatus}</strong></div>
               </div>
               <div className="icm2-accuracy-grid">
                 <div className="icm2-accuracy-item">
                   <span>Horizontal</span>
-                  <strong>8 mm</strong>
+                  <strong>{status.gnss_impact === 'LOW' ? '8' : status.gnss_impact === 'MODERATE' ? '14' : '28'} mm</strong>
                 </div>
                 <div className="icm2-accuracy-item">
                   <span>Vertical</span>
-                  <strong>15 mm</strong>
+                  <strong>{status.gnss_impact === 'LOW' ? '15' : status.gnss_impact === 'MODERATE' ? '24' : '45'} mm</strong>
                 </div>
                 <div className="icm2-accuracy-item">
                   <span>Baseline RMS</span>
-                  <strong>2.1 mm</strong>
+                  <strong>{status.range_error_m.toFixed(1)} mm</strong>
                 </div>
               </div>
               <div className="icm2-kv" style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10 }}>
                 <span>Network Status</span>
-                <strong style={{ color: '#22c55e' }}>All CORS Online</strong>
+                <strong style={{ color: view.networkColor }}>{view.networkLabel}</strong>
               </div>
             </article>
           </div>
@@ -647,7 +1049,7 @@ export default function IonosphericConditionsMonitor() {
                   </tr>
                 </thead>
                 <tbody>
-                  {GNSS_PERFORMANCE.map(row => (
+                  {view.gnssPerformance.map(row => (
                     <tr key={row.name}>
                       <td>
                         <span className="icm2-const-dot" style={{ background: row.color }} />
@@ -669,7 +1071,8 @@ export default function IonosphericConditionsMonitor() {
 
             {/* CORS Network Effect */}
             <article className="icm2-panel">
-              <div className="icm2-card-title icm2-panel-mb">CORS NETWORK EFFECT</div>
+              <div className="icm2-card-title icm2-panel-mb">CORS NETWORK EFFECT · {corsStations.length} STATIONS</div>
+              <div className="icm2-station-table-wrap">
               <table className="icm2-table">
                 <thead>
                   <tr>
@@ -678,7 +1081,12 @@ export default function IonosphericConditionsMonitor() {
                 </thead>
                 <tbody>
                   {corsStations.map(s => (
-                    <tr key={s.id}>
+                    <tr
+                      key={s.id}
+                      className={s.id === primaryStation ? 'icm2-station-active' : 'icm2-station-row'}
+                      onClick={() => setSelectedStation(s.id)}
+                      title={`Monitor ${s.id}`}
+                    >
                       <td>
                         <span className="icm2-status-dot" style={{ background: impactColor(s.quality) }} />
                         <strong>{s.id}</strong>
@@ -694,6 +1102,7 @@ export default function IonosphericConditionsMonitor() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </article>
 
             {/* Ionospheric Alerts */}
@@ -703,17 +1112,17 @@ export default function IonosphericConditionsMonitor() {
                 <div className="icm2-alert-hdr">
                   <AlertTriangle size={15} />
                   <span>Equatorial Scintillation</span>
-                  <span className="icm2-badge mod" style={{ marginLeft: 'auto' }}>MODERATE</span>
+                  <span className={`icm2-badge ${view.alertLevel === 'MODERATE' ? 'mod' : view.alertLevel === 'HIGH' ? 'high' : 'low'}`} style={{ marginLeft: 'auto' }}>{view.alertLevel}</span>
                 </div>
                 <div className="icm2-kv-stack" style={{ marginTop: 10, marginBottom: 10 }}>
-                  <div className="icm2-kv"><span>Region</span><strong>Southern Africa</strong></div>
-                  <div className="icm2-kv"><span>Time</span><strong>18:00 – 23:00 UTC</strong></div>
+                  <div className="icm2-kv"><span>Region</span><strong>Southern Africa · {primaryStation}</strong></div>
+                  <div className="icm2-kv"><span>Time</span><strong>{view.eiaActive ? '18:00 – 23:00 UTC' : 'No active window'}</strong></div>
                 </div>
                 <div className="icm2-effects-title">Possible Effects</div>
                 <ul className="icm2-effects-list">
-                  <li>RTK initialization delay</li>
-                  <li>Increased positioning errors</li>
-                  <li>Signal fading and loss of lock</li>
+                  {view.alertEffects.map(item => (
+                    <li key={item}>{item}</li>
+                  ))}
                 </ul>
               </div>
             </article>
@@ -722,7 +1131,7 @@ export default function IonosphericConditionsMonitor() {
             <article className="icm2-panel">
               <div className="icm2-panel-hdr" style={{ flexWrap: 'wrap', gap: 6 }}>
                 <span className="icm2-card-title">IONOSPHERE FORECAST</span>
-                <span className="icm2-sub-label" style={{ marginLeft: 'auto' }}>Next Update: 13:00 UTC</span>
+                <span className="icm2-sub-label" style={{ marginLeft: 'auto' }}>Next Update: {view.nextForecastUpdate} UTC</span>
               </div>
               <table className="icm2-table icm2-forecast-table">
                 <thead>
@@ -732,7 +1141,7 @@ export default function IonosphericConditionsMonitor() {
                   </tr>
                 </thead>
                 <tbody>
-                  {FORECAST_ROWS.map(row => (
+                  {view.forecastRows.map(row => (
                     <tr key={row.label}>
                       <td style={{ color: '#94a3b8' }}>{row.label}</td>
                       {row.colors.map((val, i) => (
@@ -782,6 +1191,15 @@ export default function IonosphericConditionsMonitor() {
               </p>
             </div>
           </div>
+
+          <IonospherePageAnalysis
+            status={status}
+            stations={corsStations}
+            primaryStation={primaryStation}
+            primaryName={primaryName}
+            mapLayer={mapLayer}
+            mapConsts={mapConsts}
+          />
 
         </div>
       </div>

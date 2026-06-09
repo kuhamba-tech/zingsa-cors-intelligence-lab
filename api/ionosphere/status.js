@@ -3,7 +3,7 @@ import { loadIndex, findArchiveForQuery } from '../../lib/corsDataIngest.js';
 import { buildDemoMetricsFromArchive } from '../../lib/corsDemoAnalysis.js';
 
 const NOAA_KP_URL = 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json';
-const MONITOR_IDS = ['HARA', 'BULA', 'VICF', 'GWER'];
+const DEFAULT_STATION = 'HARA';
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -47,10 +47,10 @@ export default async function handler(req, res) {
 
   const index = loadIndex();
   const { kp, kp24hMax } = await fetchKp();
-  const primaryId = String(req.query?.station || 'HARA').toUpperCase();
+  const primaryId = String(req.query?.station || DEFAULT_STATION).toUpperCase();
 
-  const stations = await Promise.all(MONITOR_IDS.map(async (stationId) => {
-    const meta = ZIMBABWE_CORS_STATIONS.find(s => s.id === stationId);
+  const stations = ZIMBABWE_CORS_STATIONS.map((meta) => {
+    const stationId = meta.id;
     const archive = findArchiveForQuery({ stationId, sourceId: 'tec-analysis' }, index)
       || findArchiveForQuery({ stationId }, index);
     const metrics = buildDemoMetricsFromArchive({
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
 
     return {
       id: stationId.replace(/_$/, ''),
-      name: meta?.name || stationId,
+      name: meta.name?.split(' (')[0] || stationId,
       vtec: metrics.tec,
       s4: metrics.s4,
       delay: +(metrics.tec * 0.45).toFixed(1),
@@ -73,19 +73,28 @@ export default async function handler(req, res) {
       rtk: rtkStatus,
       ppp: quality === 'LOW' ? 'Normal' : quality === 'MODERATE' ? 'Delayed' : 'Degraded',
       quality,
-      lat: meta?.lat,
-      lon: meta?.lon,
+      lat: meta.lat,
+      lon: meta.lon,
       position: stationPosition(stationId),
+      archive_backed: Boolean(archive),
+      data_source: archive ? 'rinex-archive' : 'climatology-model',
+      archive_date: archive?.date || null,
     };
-  }));
+  });
 
   const primary = stations.find(s => s.id === primaryId.replace(/_$/, '')) || stations[0];
 
+  const archiveBacked = stations.filter(s => s.archive_backed).length;
+
   return res.status(200).json({
     success: true,
-    mode: 'live',
+    mode: archiveBacked > 0 ? 'archive-blend' : 'model',
     provider: 'ZINGSA Ionospheric Monitor',
+    data_blend: `${archiveBacked}/${stations.length} RINEX-backed · NOAA Kp live`,
     station: primary.id,
+    station_count: stations.length,
+    archive_backed_count: archiveBacked,
+    primary_data_source: primary.data_source,
     stations,
     positions: Object.fromEntries(stations.map(s => [s.id, s.position])),
     vtec_tecu: primary.vtec,

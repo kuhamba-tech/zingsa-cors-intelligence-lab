@@ -1,0 +1,13 @@
+{
+  "provider": "ZINGSA CORS telemetry sample (development)",
+  "updated_at": "2026-06-08T12:00:00Z",
+  "stations": [
+    { "station_id": "HARA", "status": "ONLINE", "data_gap_hrs": 0.1, "coord_shift_mm": 0.6, "last_update": "2026-06-08T11:58:00Z" },
+    { "station_id": "ZINH", "status": "ONLINE", "data_gap_hrs": 0.2, "coord_shift_mm": 0.7, "last_update": "2026-06-08T11:55:00Z" },
+    { "station_id": "LUPA", "status": "ONLINE", "data_gap_hrs": 0.3, "coord_shift_mm": 0.9, "last_update": "2026-06-08T11:52:00Z" },
+    { "station_id": "CENT", "status": "ONLINE", "data_gap_hrs": 0.4, "coord_shift_mm": 1.1, "last_update": "2026-06-08T11:50:00Z" },
+    { "station_id": "MUTA", "status": "DEGRADED", "data_gap_hrs": 6.2, "coord_shift_mm": 2.8, "last_update": "2026-06-08T05:40:00Z" },
+    { "station_id": "BEIT", "status": "ONLINE", "data_gap_hrs": 0.5, "coord_shift_mm": 1.0, "last_update": "2026-06-08T11:48:00Z" },
+    { "station_id": "HACY", "status": "DEGRADED", "data_gap_hrs": 4.1, "coord_shift_mm": 3.2, "last_update": "2026-06-08T07:50:00Z" }
+  ]
+}

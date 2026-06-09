@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AFRICA_TILE_LAYERS, africaMapTileLayerProps } from './africaMapConfig.js';
+import { healthBasisLabel } from '../utils/corsNetworkData.js';
 
 const MAP_LAYER_ORDER = ['hybrid', 'satellite', 'street'];
 
@@ -39,6 +40,15 @@ function MapFocus({ center, zoom }) {
   return null;
 }
 
+function StationFocus({ station }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!station?.lat || !station?.lon) return;
+    map.flyTo([station.lat, station.lon], 8, { duration: 0.7 });
+  }, [map, station?.id, station?.lat, station?.lon]);
+  return null;
+}
+
 function MapResizeFix() {
   const map = useMap();
   useEffect(() => {
@@ -55,15 +65,24 @@ export default function CorsHealthNetworkMap({
   riskLevel = 'LOW',
   riskColor = '#1D9E75',
   mapTitle = 'CORS station network',
+  selectedStationId = null,
+  focusSelectedStation = false,
+  onStationSelect,
 }) {
   const [mapStyle, setMapStyle] = useState('hybrid');
 
+  const selectedStation = useMemo(
+    () => stations.find(st => st.id === selectedStationId || st.id?.replace(/_$/, '') === selectedStationId?.replace(/_$/, '')),
+    [stations, selectedStationId],
+  );
+
   const center = useMemo(() => {
+    if (country === 'Zimbabwe') return [-18.9, 30.1];
     if (!stations.length) return [-19.0, 29.1];
     const lat = stations.reduce((s, st) => s + st.lat, 0) / stations.length;
     const lon = stations.reduce((s, st) => s + st.lon, 0) / stations.length;
     return [lat, lon];
-  }, [stations]);
+  }, [country, stations]);
 
   const zoom = country === 'Zimbabwe' ? 6 : 5;
 
@@ -87,27 +106,39 @@ export default function CorsHealthNetworkMap({
         >
           <MapTileLayer mapStyle={mapStyle} />
           <MapFocus center={center} zoom={zoom} />
+          {focusSelectedStation && selectedStation && <StationFocus station={selectedStation} />}
           <MapResizeFix />
-          {stations.map(st => (
+          {stations.map(st => {
+            const isSelected = st.id === selectedStationId || st.id?.replace(/_$/, '') === selectedStationId?.replace(/_$/, '');
+            return (
             <CircleMarker
               key={st.id}
               center={[st.lat, st.lon]}
-              radius={10}
+              radius={isSelected ? 14 : 10}
               pathOptions={{
-                color: stationMarkerColor(st.status),
+                color: isSelected ? '#22d3ee' : stationMarkerColor(st.status),
                 fillColor: stationMarkerColor(st.status),
-                fillOpacity: 0.88,
-                weight: 2.5,
+                fillOpacity: isSelected ? 1 : 0.88,
+                weight: isSelected ? 3.5 : 2.5,
               }}
+              eventHandlers={onStationSelect ? {
+                click: () => onStationSelect(st.id),
+              } : undefined}
             >
               <Tooltip>
-                <strong>{st.id} — {st.name}</strong>
+                <strong>{st.id.replace(/_$/, '')} — {st.name}</strong>
                 <div>Status: {statusLabel(st.status)}</div>
+                {st.healthBasis && <div>{healthBasisLabel(st.healthBasis)}</div>}
+                {st.archiveCount != null && (
+                  <div>Archives: {st.archiveCount}{st.archiveLatest ? ` · latest ${st.archiveLatest}` : ''}</div>
+                )}
                 {st.network && <div>Network: {st.network}</div>}
                 <div>{st.lat.toFixed(4)}°, {st.lon.toFixed(4)}°</div>
+                {onStationSelect && <div style={{ marginTop: 4, color: '#22d3ee' }}>Click to select</div>}
               </Tooltip>
             </CircleMarker>
-          ))}
+            );
+          })}
         </MapContainer>
 
         <div style={{ position: 'absolute', top: 12, left: 14, zIndex: 500, maxWidth: '58%', pointerEvents: 'none' }}>
@@ -157,7 +188,7 @@ export default function CorsHealthNetworkMap({
       </div>
 
       <div style={{ padding: '12px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginBottom: 7 }}>Active layers:</div>
+        <div style={{ fontSize: '0.62rem', color: '#94a3b8', marginBottom: 7 }}>Map context (reference layers):</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {activeLayers.map(s => (
             <span

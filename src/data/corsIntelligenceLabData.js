@@ -56,6 +56,14 @@ export const LAB_STATIONS = {
   ],
 };
 
+export const APPLICATION_VIEWS = [
+  { id: 'cors-health', label: 'Network Status', desc: 'ZimCORS map, station health, NTRIP access' },
+  { id: 'ionosphere', label: 'Ionosphere IP', desc: 'TEC, scintillation, and perturbation index', fullPage: 'ionosphere' },
+  { id: 'space-weather', label: 'Space Weather', desc: 'Kp-driven regional space weather context', fullPage: 'weather' },
+  { id: 'tec-analysis', label: 'TEC Analysis', desc: 'Archive TEC session analysis' },
+  { id: 'bridge-monitoring', label: 'Bridge Monitoring', desc: 'Structural GNSS displacement watch' },
+];
+
 export const ANALYSIS_TABS = [
   { id: 'monitoring', label: 'Region Monitoring' },
 ];
@@ -64,6 +72,23 @@ export const ANALYSIS_METHODS = [
   { id: 'location', tab: 'monitoring', icon: '📍', title: 'Location-based analysis', desc: 'CORS and ionospheric analysis for a specific African region or ZINGSA station corridor.' },
   { id: 'monitoring', tab: 'monitoring', icon: '📡', title: 'Monitoring & Analysis', desc: 'Real-time CORS health, TEC, scintillation, and ionospheric perturbation (IP) index.' },
 ];
+
+export const ZIMCORS_SERVICE = {
+  caster: import.meta.env.VITE_ZIMCORS_NTRIP_HOST || 'ntrip.zingsa.org.zw',
+  port: Number(import.meta.env.VITE_ZIMCORS_NTRIP_PORT) || 2101,
+  mountpointPattern: import.meta.env.VITE_ZIMCORS_MOUNTPOINT_PATTERN || '{STATION}_RTCM3',
+  datum: import.meta.env.VITE_ZIMCORS_DATUM || 'ITRF2014 · AFREF',
+  format: import.meta.env.VITE_ZIMCORS_FORMAT || 'RTCM 3.2 MSM',
+  products: ['Real-time RTK corrections', 'Hourly & daily RINEX', 'Network health telemetry', 'Ionospheric TEC context'],
+  supportEmail: import.meta.env.VITE_ZIMCORS_SUPPORT_EMAIL || 'cors@zingsa.org.zw',
+  supportOrg: import.meta.env.VITE_ZIMCORS_SUPPORT_ORG || 'ZINGSA Space Science · ZNGA',
+};
+
+export function buildNtripConnection(stationId) {
+  const code = String(stationId || 'HARA').replace(/_$/, '');
+  const mountpoint = ZIMCORS_SERVICE.mountpointPattern.replace('{STATION}', code);
+  return `${ZIMCORS_SERVICE.caster}:${ZIMCORS_SERVICE.port}/${mountpoint}`;
+}
 
 export const PORTAL_LINKS = [
   { label: 'ZINGSA', url: 'https://zingsa.org.zw/' },

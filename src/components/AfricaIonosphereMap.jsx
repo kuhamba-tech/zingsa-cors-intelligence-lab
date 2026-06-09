@@ -32,13 +32,13 @@ const MAP_CITIES = [
 
 const REGION_VIEW = {
   world: { center: [15, 10], zoom: 2 },
-  pan: { center: [3, 20], zoom: 3 },
+  pan: { center: [-6, 18], zoom: 2 },
   equatorial: { center: [0, 18], zoom: 4 },
   east: { center: [2, 38], zoom: 4 },
   west: { center: [8, -2], zoom: 4 },
-  southern: { center: [-22, 24], zoom: 4 },
+  southern: { center: [-6, 18], zoom: 2 },
   north: { center: [26, 22], zoom: 4 },
-  sahel: { center: [14, 8], zoom: 4 },
+  sahel: { center: [-6, 18], zoom: 2 },
 };
 
 function activityLabel(kp) {
@@ -52,7 +52,8 @@ function RegionFocus({ regionId }) {
   const map = useMap();
   useEffect(() => {
     const view = REGION_VIEW[regionId] || REGION_VIEW.pan;
-    map.flyTo(view.center, view.zoom, { duration: 0.85 });
+    map.stop();
+    map.setView(view.center, view.zoom, { animate: regionId !== 'world', duration: regionId === 'world' ? 0 : 0.85 });
   }, [map, regionId]);
   return null;
 }
@@ -78,6 +79,7 @@ export default function AfricaIonosphereMap({ kp, status, regionId, regionSummar
   const view = REGION_VIEW[regionId] || REGION_VIEW.pan;
   const tileProps = africaMapTileLayerProps(tileMode);
   const isWorld = regionId === 'world';
+  const mapScope = isWorld ? 'world' : 'africa';
   const eiaBounds = isWorld ? [[-18, -180], [18, 180]] : [[-18, -18], [18, 52]];
   const eiaTooltip = isWorld
     ? 'Global EIA belt - equatorial GNSS scintillation risk zone'
@@ -110,7 +112,7 @@ export default function AfricaIonosphereMap({ kp, status, regionId, regionSummar
       </div>
 
       <div className="sw-ionosphere-map-shell">
-        <MapContainer key={tileMode} center={view.center} zoom={view.zoom} minZoom={2} maxZoom={12} maxBounds={regionId === 'world' ? undefined : AFRICA_MAP_BOUNDS} maxBoundsViscosity={0.85} scrollWheelZoom style={{ height: '100%', width: '100%' }} attributionControl={false}>
+        <MapContainer key={`${mapScope}-${tileMode}`} center={view.center} zoom={view.zoom} minZoom={2} maxZoom={isWorld ? 4 : 12} maxBounds={isWorld ? undefined : AFRICA_MAP_BOUNDS} maxBoundsViscosity={0.85} scrollWheelZoom style={{ height: '100%', width: '100%' }} attributionControl={false}>
           <TileLayer key={tileMode} {...tileProps} />
           <RegionFocus regionId={regionId} />
           <MapResizeFix />

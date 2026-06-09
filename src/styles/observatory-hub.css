@@ -16,10 +16,10 @@
 /* ── Header ── */
 .obs-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  padding: 11px 20px;
+  gap: 24px;
+  padding: 28px 24px 20px;
   background: rgba(1, 5, 18, 0.97);
   border-bottom: 1px solid rgba(167,139,250,0.15);
   flex-wrap: wrap;
@@ -27,7 +27,7 @@
 
 .obs-header-left {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -39,21 +39,36 @@
   display: flex; align-items: center; justify-content: center;
   color: #a78bfa;
   flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.obs-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #a78bfa;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .obs-title {
-  margin: 0;
-  font-size: 1rem;
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 4vw, 4.3rem);
   font-weight: 900;
-  letter-spacing: 0.07em;
+  line-height: 0.98;
+  letter-spacing: 0;
   color: #f8fafc;
 }
 
 .obs-subtitle {
-  margin: 2px 0 0;
-  color: #475569;
-  font-size: 0.62rem;
-  font-weight: 700;
+  margin: 0;
+  color: #a7b3c9;
+  font-size: clamp(1.05rem, 1.55vw, 1.35rem);
+  font-weight: 400;
+  line-height: 1.7;
 }
 
 .obs-header-meta {
@@ -61,10 +76,12 @@
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 1120px;
 }
 
 .obs-meta-item {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 5px;
   color: #64748b;
@@ -73,6 +90,99 @@
 }
 
 .obs-meta-item svg { opacity: 0.7; }
+
+.obs-site-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 280px;
+  min-height: 92px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(34, 211, 238, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(8, 31, 50, 0.94), rgba(10, 14, 34, 0.98));
+  border: 1px solid rgba(34, 211, 238, 0.24);
+  color: #93c5fd;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+.obs-site-pill div {
+  display: grid;
+  gap: 2px;
+}
+
+.obs-site-pill span,
+.obs-clock-card span {
+  color: #64748b;
+  font-size: 0.58rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.obs-site-pill strong {
+  color: #c7d2fe;
+  font-size: 0.95rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.obs-clock-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 280px;
+  min-height: 92px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(167, 139, 250, 0.16), transparent 34%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(10, 14, 34, 0.98));
+  border: 1px solid rgba(167, 139, 250, 0.24);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+.obs-clock-card--utc {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(96, 165, 250, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(5, 16, 38, 0.98));
+  border-color: rgba(96, 165, 250, 0.24);
+}
+
+.obs-clock-card > div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.obs-clock-card strong {
+  color: #f8fafc;
+  font-size: 1.45rem;
+  line-height: 1;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.obs-clock-card small {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.obs-clock-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.13);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  box-shadow: inset 0 0 18px rgba(96, 165, 250, 0.05);
+  flex-shrink: 0;
+}
 
 .obs-night-badge {
   display: flex;
@@ -86,6 +196,32 @@
   font-size: 0.62rem;
   font-weight: 900;
   letter-spacing: 0.04em;
+}
+
+.obs-night-badge--day {
+  background: rgba(234,179,8,0.1);
+  border-color: rgba(234,179,8,0.35);
+  color: #fde68a;
+}
+
+.obs-night-badge--twilight {
+  background: rgba(249,115,22,0.1);
+  border-color: rgba(249,115,22,0.35);
+  color: #fdba74;
+}
+
+.obs-moon-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(148,163,184,0.1);
+  border: 1px solid rgba(148,163,184,0.28);
+  border-radius: 20px;
+  padding: 4px 12px;
+  color: #cbd5e1;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 
 .obs-night-dot {
@@ -921,6 +1057,34 @@
   margin: 6px 0 0;
   color: #94a3b8;
   font-size: 0.78rem;
+}
+
+.obs-telescope-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.obs-telescope-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(148,163,184,0.1);
+  border: 1px solid rgba(148,163,184,0.28);
+  border-radius: 20px;
+  padding: 4px 12px;
+  color: #cbd5e1;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.obs-telescope-sim-note {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 600;
 }
 
 .obs-telescope-api {

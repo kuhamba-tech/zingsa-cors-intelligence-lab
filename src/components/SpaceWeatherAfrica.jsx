@@ -1,11 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, MapPin, Radio, Satellite, Sun, Zap } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Activity, MapPin, Radio, RefreshCw, Satellite, Sun, Waves, Zap } from 'lucide-react';
+import OperationalServicesNav from './OperationalServicesNav.jsx';
 import { AFRICAN_REGIONS, AFRICAN_SATELLITES_AT_RISK, AFRICAN_MONITORING_CENTRES } from '../data/africaSpaceWeatherData.js';
 import AfricaIonosphereMap from './AfricaIonosphereMap.jsx';
-import { fetchAfricaSpaceWeather, fetchLiveKp, fetchSolarActivity, getDemoSolarActivity } from '../services/spaceWeatherApi.js';
+import {
+  buildDonkiActiveRegions,
+  buildDonkiCmeRows,
+  buildDonkiRadioBursts,
+  fetchAfricaSpaceWeather,
+  fetchLiveKp,
+  fetchSolarActivity,
+  getDemoSolarActivity,
+  getDemoSpaceWeather,
+} from '../services/spaceWeatherApi.js';
 import '../styles/space-weather.css';
 
 const ZIMBABWE_TZ_LABEL = 'CAT (UTC+2)';
+
+function buildFluxTimeLabels(count, endDate = new Date(), stepMinutes = 5, slots = 7) {
+  if (!count || count < 2) return [];
+  const step = Math.max(1, Math.floor((count - 1) / Math.max(slots - 1, 1)));
+  const labels = [];
+  for (let i = 0; i < count; i += step) {
+    const d = new Date(endDate.getTime() - (count - 1 - i) * stepMinutes * 60 * 1000);
+    labels.push(`${d.toISOString().slice(11, 16)} UTC`);
+  }
+  return labels;
+}
 
 function formatZimbabweTime(date) {
   return new Intl.DateTimeFormat('en-GB', {
@@ -37,7 +59,7 @@ function getKpStatus(kp) {
   return { label: 'Major Storm', level: 5, color: '#dc2626', glow: 'rgba(220,38,38,0.55)', bg: 'rgba(220,38,38,0.12)' };
 }
 
-function getImpacts(kp) {
+function getImpactsLegacy(kp) {
   const s = kp < 2 ? 'low' : kp < 4 ? 'low' : kp < 5 ? 'medium' : 'high';
   return [
     { icon: '📡', sector: 'GNSS & Positioning', impact: kp < 2 ? 'Nominal accuracy. CORS networks operating optimally across Africa.' : kp < 4 ? 'Minor errors possible near the Equatorial Ionization Anomaly belt across equatorial Africa.' : kp < 5 ? 'Significant GNSS degradation across Central, East, and West Africa. CORS and RTK users should verify fixes.' : 'Severe GNSS disruptions continent-wide. Position errors >10m.', severity: s },
@@ -63,7 +85,7 @@ function getGlobalImpacts(kp) {
   ];
 }
 
-function getAlerts(kp, scope = 'africa') {
+function getAlertsLegacy(kp, scope = 'africa') {
   const now = new Date();
   const t = (m) => { const d = new Date(now.getTime() - m * 60000); return `${formatZimbabweTime(d)} ${ZIMBABWE_TZ_LABEL}`; };
   if (scope === 'world') {
@@ -91,6 +113,51 @@ function getAlerts(kp, scope = 'africa') {
   if (kp >= 4) list.push({ msg: 'HF radio disruptions reported across the Sahel and East Africa', color: '#f97316', time: t(14) });
   if (kp >= 5) list.push({ msg: 'Solar particle flux elevated — increased satellite drag risk', color: '#ef4444', time: t(3) });
   if (kp >= 6) list.push({ msg: 'Geomagnetic storm — power grid risk across Southern Africa', color: '#dc2626', time: t(1) });
+  return list;
+}
+
+function getImpacts(kp) {
+  const s = kp < 2 ? 'low' : kp < 4 ? 'low' : kp < 5 ? 'medium' : 'high';
+  return [
+    { icon: 'GNSS', sector: 'GNSS & Positioning', impact: kp < 2 ? 'Quiet geomagnetic conditions. CORS users should still monitor local TEC and scintillation products for precision work.' : kp < 4 ? 'Minor ionospheric effects are possible near low-latitude and equatorial regions, especially after local sunset.' : kp < 5 ? 'GNSS users in equatorial and low-latitude Africa should verify RTK fixes, corrections, and positioning residuals.' : 'Geomagnetic storm conditions can degrade GNSS positioning and timing; verify corrections and avoid assuming fixed error values.', severity: s },
+    { icon: 'RTK', sector: 'Surveying', impact: kp < 2 ? 'Cadastral and construction surveys should remain nominal when local CORS corrections and receiver quality are stable.' : kp < 4 ? 'Minor baseline effects are possible on long lines near the geomagnetic equator.' : kp < 5 ? 'RTK and static surveys in low-latitude regions should be checked against residuals and repeat observations.' : 'Survey-grade GNSS may be unreliable in affected areas without validation from local corrections and quality metrics.', severity: kp < 5 ? (kp < 4 ? 'low' : 'medium') : 'high' },
+    { icon: 'MAP', sector: 'Precision Mapping', impact: kp < 2 ? 'Drone and mobile mapping missions are nominal when correction links and local GNSS quality indicators are stable.' : kp < 4 ? 'Post-sunset scintillation may affect low-latitude drone RTK.' : kp < 5 ? 'GCP and PPK/RTK solutions should be validated where TEC gradients or scintillation are present.' : 'Precision mapping should be validated carefully in affected regions before operational use.', severity: kp < 5 ? (kp < 4 ? 'low' : 'medium') : 'high' },
+    { icon: 'AVI', sector: 'Aviation Navigation', impact: kp < 2 ? 'Standard geomagnetic conditions. Aviation users should continue normal GNSS integrity monitoring.' : kp < 4 ? 'Minor accuracy changes are possible on equatorial routes.' : kp < 5 ? 'GNSS and HF radio reliability should be monitored on affected routes.' : 'Storm conditions can affect GNSS, HF communications, and satellite links; aviation operators should follow official advisories.', severity: s },
+    { icon: 'HF', sector: 'HF Radio Communications', impact: kp < 2 ? 'HF conditions are generally quiet from the geomagnetic perspective.' : kp < 4 ? 'Occasional fading is possible on equatorial and trans-equatorial HF paths.' : kp < 5 ? 'HF disruptions may occur in affected low-latitude and auroral-linked paths.' : 'Storm conditions can produce significant HF disruption; check operational forecasts and local reports.', severity: s },
+    { icon: 'SAT', sector: 'Satellite Operations', impact: kp < 2 ? 'Geomagnetic conditions are quiet for satellite operations.' : kp < 4 ? 'Minor scintillation is possible on low-latitude links.' : kp < 5 ? 'LEO operators should monitor drag conditions and communication quality.' : 'Storm conditions can increase drag and disrupt some communication links; operators should use mission-specific telemetry.', severity: s },
+    { icon: 'GRID', sector: 'Power Infrastructure', impact: kp < 2 ? 'Geomagnetic conditions are quiet for power-grid operations.' : kp < 4 ? 'Grid operators may continue routine GIC awareness on long transmission lines.' : kp < 5 ? 'Power-grid operators should monitor geomagnetically induced current risk where applicable.' : 'Strong storms can increase GIC risk; follow official grid and space-weather advisories.', severity: s },
+    { icon: 'EO', sector: 'Earth Observation', impact: kp < 2 ? 'Space-weather conditions are quiet for Earth observation operations.' : kp < 4 ? 'Minor ionospheric effects may affect radio-frequency EO products such as SAR.' : kp < 5 ? 'Ionospheric disturbances can affect SAR phase and GNSS-supported georeferencing in affected regions.' : 'Severe disturbances can degrade some EO products and downlink reliability; validate product quality.', severity: s },
+  ];
+}
+
+function getAlerts(kp, scope = 'africa') {
+  const now = new Date();
+  const t = (m) => { const d = new Date(now.getTime() - m * 60000); return `${formatZimbabweTime(d)} ${ZIMBABWE_TZ_LABEL}`; };
+  if (scope === 'world') {
+    if (kp < 2) return [
+      { msg: 'Planetary Kp is quiet - global geomagnetic conditions are nominal', color: '#22c55e', time: t(0) },
+      { msg: 'GNSS positioning is stable across major world regions, subject to local ionospheric conditions', color: '#22c55e', time: t(18) },
+      { msg: 'Satellite communications and aviation navigation are operating normally from a geomagnetic perspective', color: '#22c55e', time: t(35) },
+    ];
+    const globalList = [];
+    if (kp >= 2) globalList.push({ msg: 'Unsettled geomagnetic activity - monitor polar HF radio and auroral-region operations', color: '#22d3ee', time: t(4) });
+    if (kp >= 3) globalList.push({ msg: 'GNSS accuracy watch for equatorial, low-latitude, and auroral regions', color: '#EF9F27', time: t(9) });
+    if (kp >= 4) globalList.push({ msg: 'Aviation and satellite operators should monitor high-latitude routes and official advisories', color: '#f97316', time: t(14) });
+    if (kp >= 5) globalList.push({ msg: 'Geomagnetic storm conditions - satellite drag and HF disruption risk elevated', color: '#ef4444', time: t(3) });
+    if (kp >= 6) globalList.push({ msg: 'Severe storm watch - power-grid GIC risk increases in susceptible high-latitude networks', color: '#dc2626', time: t(1) });
+    return globalList;
+  }
+  if (kp < 2) return [
+    { msg: 'Quiet geomagnetic conditions over Africa from the planetary Kp perspective', color: '#22c55e', time: t(0) },
+    { msg: 'GNSS positioning should remain stable where local TEC, scintillation, and correction services are nominal', color: '#22c55e', time: t(18) },
+    { msg: 'Satellite communications are generally nominal; continue routine link-quality monitoring', color: '#22c55e', time: t(35) },
+  ];
+  const list = [];
+  if (kp >= 2) list.push({ msg: 'Monitor equatorial Africa for possible EIA-related scintillation after local sunset', color: '#22d3ee', time: t(4) });
+  if (kp >= 3) list.push({ msg: 'GNSS accuracy watch for low-latitude and equatorial African regions', color: '#EF9F27', time: t(9) });
+  if (kp >= 4) list.push({ msg: 'HF radio and satellite-link reliability should be monitored across affected African routes', color: '#f97316', time: t(14) });
+  if (kp >= 5) list.push({ msg: 'Geomagnetic storm conditions - monitor satellite drag, GNSS integrity, and HF communications', color: '#ef4444', time: t(3) });
+  if (kp >= 6) list.push({ msg: 'Severe storm watch - monitor power-grid GIC risk where infrastructure is susceptible', color: '#dc2626', time: t(1) });
   return list;
 }
 
@@ -194,10 +261,11 @@ function intensityColor(v) {
   return '#64748b';
 }
 
-function XRayFluxChart({ values }) {
+function XRayFluxChart({ values, updated }) {
   const [range, setRange] = useState('24H');
   const W = 360; const H = 82;
   const pts = (values || []).filter(v => Number.isFinite(v));
+  const endDate = updated ? new Date(updated) : new Date();
   const MIN_LOG = -9; const MAX_LOG = -3; const RNG = MAX_LOG - MIN_LOG;
 
   const BANDS = [
@@ -216,11 +284,14 @@ function XRayFluxChart({ values }) {
     }).join(' ');
   };
 
-  const xLabels = range === '7D'
-    ? ['18 May','19 May','20 May','21 May','22 May','23 May','24 May']
-    : range === '6H'
-    ? ['08:00','09:00','10:00','11:00','12:00','13:00','14:00 UTC']
-    : ['12:00','16:00','20:00','24 May','04:00','08:00','12:00 UTC'];
+  const liveLabels = pts.length >= 4 ? buildFluxTimeLabels(pts.length, endDate, 5) : [];
+  const xLabels = liveLabels.length
+    ? liveLabels
+    : range === '7D'
+      ? ['18 May','19 May','20 May','21 May','22 May','23 May','24 May']
+      : range === '6H'
+        ? ['08:00','09:00','10:00','11:00','12:00','13:00','14:00 UTC']
+        : ['12:00','16:00','20:00','24 May','04:00','08:00','12:00 UTC'];
 
   return (
     <div>
@@ -269,16 +340,28 @@ function ActiveRegionsSun({ regions }) {
   );
 }
 
-function EuvChart() {
+function EuvChart({ values, mode = 'demo', updated }) {
   const W = 340; const H = 72;
-  const pts = Array.from({ length: 42 }, (_, i) =>
-    0.55 + Math.sin(i / 5) * 0.32 + Math.max(0, Math.sin(i / 2.5) * 0.22) + (i > 30 ? (i - 30) * 0.04 : 0)
+  const demoPts = Array.from({ length: 42 }, (_, i) =>
+    0.55 + Math.sin(i / 5) * 0.32 + Math.max(0, Math.sin(i / 2.5) * 0.22) + (i > 30 ? (i - 30) * 0.04 : 0),
   );
+  const liveRaw = (values || []).filter(v => Number.isFinite(v) && v > 0);
+  const pts = liveRaw.length >= 4
+    ? liveRaw.map(v => v * 1e5)
+    : demoPts;
   const min = Math.min(...pts); const max = Math.max(...pts); const rng = max - min || 1;
   const path = pts.map((v, i) => `${i === 0 ? 'M' : 'L'}${((i / (pts.length - 1)) * W).toFixed(1)},${(H - ((v - min) / rng) * H).toFixed(1)}`).join(' ');
-  const days = ['18 May','19 May','20 May','21 May','22 May','23 May','24 May'];
+  const endDate = updated ? new Date(updated) : new Date();
+  const days = liveRaw.length >= 4
+    ? buildFluxTimeLabels(pts.length, endDate, 5)
+    : ['18 May','19 May','20 May','21 May','22 May','23 May','24 May'];
   return (
     <div>
+      {mode !== 'live' && liveRaw.length < 4 && (
+        <div style={{ color: '#64748b', fontSize: '0.58rem', fontWeight: 700, marginBottom: 6 }}>
+          Illustrative curve — GOES soft X-ray proxy when live
+        </div>
+      )}
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H, display: 'block' }}>
         <defs>
           <linearGradient id="euvGrad" x1="0" y1="0" x2="0" y2="1">
@@ -326,7 +409,55 @@ function SolarCycleChart() {
   );
 }
 
-function SolarActivityMonitor() {
+function SolarGnssFooterBar({ status }) {
+  return (
+    <div className="sw-footer-bar">
+      <div className="sw-footer-section">
+        <div className="sw-footer-title">Impact on GNSS &amp; CORS Networks</div>
+        <div className="sw-footer-impacts">
+          {[
+            { icon: Satellite, label: 'R1 RTK Accuracy',     value: status.level > 1 ? 'Moderate Impact' : 'Nominal',       color: status.level > 1 ? '#f97316' : '#22c55e' },
+            { icon: Activity,  label: 'PPP Convergence',      value: status.level > 1 ? 'Slightly Slower' : 'Normal',        color: status.level > 1 ? '#f97316' : '#22c55e' },
+            { icon: Waves,     label: 'Ionospheric Delay',    value: status.level > 1 ? 'Increased' : 'Nominal',             color: status.level > 1 ? '#f97316' : '#22c55e' },
+            { icon: Zap,       label: 'Signal Scintillation', value: status.level > 2 ? 'Possible' : 'Low',                 color: status.level > 2 ? '#f97316' : '#22c55e' },
+            { icon: Radio,     label: 'HF Communication',     value: status.level > 2 ? 'Degraded' : 'Excellent',           color: status.level > 2 ? '#ef4444' : '#22c55e' },
+          ].map(({ icon: Icon, label, value, color }) => (
+            <div key={label} className="sw-footer-impact-item">
+              <Icon size={15} style={{ color, flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <div className="sw-footer-impact-label">{label}</div>
+                <div className="sw-footer-impact-value" style={{ color }}>{value}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="sw-footer-divider" />
+      <div className="sw-footer-section">
+        <div className="sw-footer-title">Solar Activity Levels</div>
+        <div className="sw-footer-levels">
+          {[
+            { color: '#22c55e', label: 'Low',      sub: 'Minimal Impact' },
+            { color: '#eab308', label: 'Moderate', sub: 'Minor Impact' },
+            { color: '#f97316', label: 'High',     sub: 'Strong Impact' },
+            { color: '#ef4444', label: 'Severe',   sub: 'Major Impact' },
+            { color: '#a855f7', label: 'Extreme',  sub: 'Extreme Impact' },
+          ].map(({ color, label, sub }) => (
+            <div key={label} className="sw-footer-level-item">
+              <span className="sw-footer-level-dot" style={{ background: color }} />
+              <div>
+                <div style={{ color, fontSize: '0.68rem', fontWeight: 800 }}>{label}</div>
+                <div style={{ color: '#64748b', fontSize: '0.58rem' }}>{sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SolarActivityMonitor({ status }) {
   const [solar, setSolar] = useState(() => getDemoSolarActivity());
   const [loading, setLoading] = useState(true);
 
@@ -359,6 +490,19 @@ function SolarActivityMonitor() {
   const latestFlare = donki.flares?.[0];
   const latestCme = donki.cmes?.[0];
   const latestStorm = donki.storms?.[0];
+  const liveCmeRows = buildDonkiCmeRows(donki.cmes);
+  const liveActiveRegions = buildDonkiActiveRegions(donki.flares);
+  const liveRadioBursts = buildDonkiRadioBursts(donki.flares);
+  const cmeRows = liveCmeRows.length ? liveCmeRows : (solar.mode === 'live' ? [] : CME_TABLE_DEMO);
+  const activeRegions = liveActiveRegions.length
+    ? liveActiveRegions
+    : (solar.mode === 'live' ? [] : ACTIVE_REGIONS_DEMO);
+  const radioBursts = liveRadioBursts.length
+    ? liveRadioBursts
+    : (solar.mode === 'live' ? [] : RADIO_BURSTS_DEMO);
+  const enhDataNote = solar.mode === 'live'
+    ? 'NASA DONKI + NOAA SWPC · last 7 days'
+    : 'Illustrative demo panels — live solar fetch unavailable';
   const impacts = [
     ['GNSS / CORS', level.gnss],
     ['HF Radio', level.label === 'Low' ? 'Nominal' : 'Monitor outages'],
@@ -462,33 +606,36 @@ function SolarActivityMonitor() {
       </div>
 
       {/* ── Enhanced 2-row panel grid ── */}
+      <div className="sw-enh-data-note">{enhDataNote}</div>
       <div className="sw-enh-grid">
 
         {/* Row 1 — X-Ray Flux */}
         <article className="sw-enh-panel">
           <div className="sw-enh-panel-title">Solar X-Ray Flux (GOES-16)</div>
-          <XRayFluxChart values={solar.xraySeries} />
+          <XRayFluxChart values={solar.xraySeries} updated={solar.updated} />
         </article>
 
         {/* Row 1 — Active Regions */}
         <article className="sw-enh-panel">
           <div className="sw-enh-panel-title">Active Regions</div>
           <div className="sw-enh-ar-layout">
-            <ActiveRegionsSun regions={ACTIVE_REGIONS_DEMO} />
+            <ActiveRegionsSun regions={activeRegions.length ? activeRegions : (solar.mode === 'live' ? [] : ACTIVE_REGIONS_DEMO)} />
             <div>
               <table className="sw-enh-table">
                 <thead>
                   <tr><th>Region</th><th>Class</th><th>Mag.Type</th><th>Spots</th></tr>
                 </thead>
                 <tbody>
-                  {ACTIVE_REGIONS_DEMO.map(r => (
+                  {activeRegions.length ? activeRegions.map(r => (
                     <tr key={r.id}>
                       <td>{r.id}</td><td>{r.cls}</td><td>{r.mag}</td><td>{r.spots}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr><td colSpan={4} className="sw-enh-empty">No DONKI flare regions in the last 7 days.</td></tr>
+                  )}
                 </tbody>
               </table>
-              <a href="#" className="sw-enh-view-all">View All Regions →</a>
+              <a href="https://api.nasa.gov/DONKI/FLR" target="_blank" rel="noreferrer" className="sw-enh-view-all">NASA DONKI Flares →</a>
             </div>
           </div>
         </article>
@@ -501,31 +648,34 @@ function SolarActivityMonitor() {
               <tr><th>Date (UTC)</th><th>Speed (km/s)</th><th>Width</th><th>Halo</th><th>Impact</th></tr>
             </thead>
             <tbody>
-              {CME_TABLE_DEMO.map((c, i) => (
-                <tr key={i}>
+              {cmeRows.length ? cmeRows.map((c) => (
+                <tr key={c.id || c.date}>
                   <td>{c.date}</td>
                   <td>{c.speed}</td>
                   <td>{c.width}</td>
                   <td style={{ color: c.halo === 'Yes' ? '#22c55e' : c.halo === 'Partial' ? '#eab308' : '#94a3b8' }}>{c.halo}</td>
                   <td style={{ color: c.impact === 'Possible' ? '#22c55e' : '#94a3b8', fontWeight: 900 }}>{c.impact}</td>
                 </tr>
-              ))}
+              )) : (
+                <tr><td colSpan={5} className="sw-enh-empty">No DONKI CME events in the last 7 days.</td></tr>
+              )}
             </tbody>
           </table>
-          <a href="#" className="sw-enh-view-all">View All CMEs →</a>
+          <a href="https://api.nasa.gov/DONKI/CME" target="_blank" rel="noreferrer" className="sw-enh-view-all">NASA DONKI CME →</a>
         </article>
 
-        {/* Row 2 — EUV Irradiance */}
+        {/* Row 2 — GOES soft X-ray proxy (not SDO/EVE) */}
         <article className="sw-enh-panel">
           <div className="sw-enh-panel-hdr">
-            <span className="sw-enh-panel-title">Solar EUV Irradiance (EVE)</span>
-            <select className="sw-enh-select">
-              <option>Ly-α  0.1 – 7.0 nm</option>
-              <option>0.1 – 50 nm</option>
-            </select>
+            <span className="sw-enh-panel-title">GOES soft X-ray flux (0.1–0.8 nm)</span>
+            <span className="sw-enh-select" style={{ cursor: 'default', opacity: 0.85 }}>
+              {solar.mode === 'live' ? 'NOAA SWPC live' : 'Demo model'}
+            </span>
           </div>
-          <div style={{ color: '#475569', fontSize: '0.56rem', fontWeight: 700, marginBottom: 4 }}>mW/m²</div>
-          <EuvChart />
+          <div style={{ color: '#475569', fontSize: '0.56rem', fontWeight: 700, marginBottom: 4 }}>
+            W/m² (scaled display) · irradiance proxy, not SDO/EVE
+          </div>
+          <EuvChart values={solar.xraySeries} mode={solar.mode} updated={solar.updated} />
         </article>
 
         {/* Row 2 — Radio Bursts */}
@@ -536,18 +686,20 @@ function SolarActivityMonitor() {
               <tr><th>Time (UTC)</th><th>Type</th><th>Frequency</th><th>Intensity</th><th>Location</th></tr>
             </thead>
             <tbody>
-              {RADIO_BURSTS_DEMO.map((b, i) => (
-                <tr key={i}>
+              {radioBursts.length ? radioBursts.map((b, i) => (
+                <tr key={`${b.time}-${i}`}>
                   <td>{b.time}</td>
                   <td>{b.type}</td>
                   <td>{b.freq}</td>
                   <td style={{ color: intensityColor(b.intensity), fontWeight: 900 }}>{b.intensity}</td>
                   <td>{b.loc}</td>
                 </tr>
-              ))}
+              )) : (
+                <tr><td colSpan={5} className="sw-enh-empty">No flare-derived radio burst proxies in the last 7 days.</td></tr>
+              )}
             </tbody>
           </table>
-          <a href="#" className="sw-enh-view-all">View All Radio Bursts →</a>
+          <a href="https://www.swpc.noaa.gov/products/goes-x-ray-flux" target="_blank" rel="noreferrer" className="sw-enh-view-all">NOAA GOES X-ray →</a>
         </article>
 
         {/* Row 2 — Solar Cycle Progress */}
@@ -565,11 +717,14 @@ function SolarActivityMonitor() {
             </div>
           </div>
           <div className="sw-enh-sub-label" style={{ margin: '8px 0 2px' }}>Estimated Peak</div>
-          <div style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: 700, marginBottom: 8 }}>Jul 2025 – Oct 2025</div>
+          <div style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: 700, marginBottom: 8 }}>2024 – 2026 (Cycle 25 maximum window)</div>
+          <div style={{ color: '#64748b', fontSize: '0.58rem', fontWeight: 700, marginBottom: 6 }}>Illustrative sunspot index model — not live NOAA data</div>
           <SolarCycleChart />
         </article>
 
       </div>
+
+      {status && <SolarGnssFooterBar status={status} />}
 
       {loading && <div className="sw-solar-loading">Refreshing NOAA SWPC solar feeds...</div>}
     </section>
@@ -632,8 +787,8 @@ function ImpactPanel({ impacts, status, title = 'Africa Impact Analysis' }) {
         {impacts.map((item, i) => (
           <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: `1px solid ${SEV_COLOR[item.severity]}25`, borderRadius: 12, padding: '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
-              <strong style={{ fontSize: '0.8rem', color: '#e2e8f0', flex: 1 }}>{item.sector}</strong>
+              <span style={{ minWidth: 42, fontSize: '0.78rem', lineHeight: 1, fontWeight: 800, color: '#e2e8f0', fontFamily: 'inherit', letterSpacing: 0 }}>{item.icon}</span>
+              <strong style={{ fontSize: '0.8rem', lineHeight: 1.2, color: '#e2e8f0', flex: 1 }}>{item.sector}</strong>
               <span style={{ fontSize: '0.58rem', fontWeight: 700, color: SEV_COLOR[item.severity], background: `${SEV_COLOR[item.severity]}18`, padding: '2px 7px', borderRadius: 8, textTransform: 'uppercase' }}>{item.severity}</span>
             </div>
             <p style={{ margin: 0, fontSize: '0.74rem', color: '#a0a8c0', lineHeight: 1.55 }}>{item.impact}</p>
@@ -705,16 +860,43 @@ function SatellitesAtRiskPanel({ kp }) {
   );
 }
 
+function SpaceWeatherSummary({ kp, status, regionId, apiMode, updated }) {
+  const region = AFRICAN_REGIONS.find(r => r.id === regionId) || AFRICAN_REGIONS[0];
+  const gnssImpact = kp < 3 ? 'low' : kp < 5 ? 'moderate' : 'high';
+  return (
+    <section className="sw-page-summary">
+      <div className="sw-page-summary-kicker">Live interpretation</div>
+      <h3 className="sw-page-summary-title">What this page is showing</h3>
+      <p>
+        Kp is <strong style={{ color: status.color }}>{kp.toFixed(1)} ({status.label})</strong> for the{' '}
+        <strong>{region.label}</strong> view. GNSS and CORS impact is <strong>{gnssImpact}</strong>.
+        {apiMode === 'live' ? ' Data is blended from NOAA SWPC live feeds.' : ' Demo fallback is active — connect live APIs for operations.'}
+        {updated && <> Last refresh: {formatZimbabweDateTime(updated)}.</>}
+      </p>
+      <ul>
+        <li>Use the ionosphere monitor for station-level TEC, scintillation, and RTK guidance.</li>
+        <li>Use National CORS Services for ZimCORS network health, NTRIP access, and station integrity.</li>
+        <li>Enable alert notifications on the CORS Alert System when Kp rises above operational thresholds.</li>
+      </ul>
+    </section>
+  );
+}
+
 export default function SpaceWeatherAfrica() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [kp, setKp] = useState(1.0);
   const [kpHistory, setKpHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [updated, setUpdated] = useState(null);
-  const [regionId, setRegionId] = useState('pan');
+  const [regionId, setRegionId] = useState(() => {
+    const region = searchParams.get('region');
+    return AFRICAN_REGIONS.some(r => r.id === region) ? region : 'pan';
+  });
   const [apiMode, setApiMode] = useState('demo');
 
   const fetchKp = async () => {
+    setLoading(true);
     try {
       let data;
       try {
@@ -725,10 +907,15 @@ export default function SpaceWeatherAfrica() {
       setKp(parseFloat(data.kp_index) || 1);
       setKpHistory(data.history || []);
       setApiMode(data.mode || 'live');
-      setUpdated(new Date());
+      setUpdated(data.timestamp ? new Date(data.timestamp) : new Date());
       setError(false);
     } catch {
-      setError(true);
+      const demo = getDemoSpaceWeather();
+      setKp(demo.kp_index);
+      setKpHistory(demo.history || []);
+      setApiMode('demo');
+      setUpdated(demo.timestamp ? new Date(demo.timestamp) : new Date());
+      setError(false);
     } finally {
       setLoading(false);
     }
@@ -739,6 +926,21 @@ export default function SpaceWeatherAfrica() {
     const id = setInterval(fetchKp, 60000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const urlRegion = searchParams.get('region');
+    const resolved = urlRegion && AFRICAN_REGIONS.some(r => r.id === urlRegion) ? urlRegion : 'pan';
+    setRegionId(prev => (prev === resolved ? prev : resolved));
+  }, [searchParams]);
+
+  useEffect(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (!regionId || regionId === 'pan') next.delete('region');
+      else next.set('region', regionId);
+      return next.toString() === prev.toString() ? prev : next;
+    }, { replace: true });
+  }, [regionId, setSearchParams]);
 
   const status = getKpStatus(kp);
   const regionMeta = AFRICAN_REGIONS.find(r => r.id === regionId) || AFRICAN_REGIONS[0];
@@ -751,12 +953,12 @@ export default function SpaceWeatherAfrica() {
       <style>{`@keyframes swPulse{0%,100%{opacity:1}50%{opacity:0.35}}`}</style>
 
       <div style={{ textAlign: 'center', marginBottom: 36 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.15em', color: '#22d3ee', textTransform: 'uppercase', background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.25)', borderRadius: 20, padding: '4px 14px', marginBottom: 12 }}>
-          ZINGSA · LIVE IONOSPHERIC MONITOR
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.12em', color: '#22d3ee', textTransform: 'uppercase', marginBottom: 18 }}>
+          ZINGSA Space Science Operations
         </span>
-        <h2 style={{ margin: '0 0 10px', fontSize: '1.65rem', fontWeight: 900, color: '#e2e8f0' }}>Space Weather <span style={{ color: '#22d3ee' }}>{isWorld ? 'Worldwide' : 'Over Africa'}</span></h2>
-        <p style={{ margin: '0 auto', maxWidth: 640, fontSize: '0.85rem', color: '#a0a8c0', lineHeight: 1.7 }}>
-          Real-time geomagnetic conditions from NOAA SWPC via <code style={{ color: '#22d3ee' }}>/api/space-weather/africa</code>, interpreted for {isWorld ? 'global' : 'African'} GNSS, satellites, aviation, power grids, and CORS networks.
+        <h2 style={{ margin: '0 0 12px', fontSize: 'clamp(2rem, 4vw, 4.3rem)', fontWeight: 900, color: '#f8fafc', lineHeight: 0.98, letterSpacing: 0 }}>Space Weather <span style={{ color: '#22d3ee' }}>{isWorld ? 'Worldwide' : 'Over Africa'}</span></h2>
+        <p style={{ margin: '0 auto', maxWidth: 650, fontSize: 'clamp(1.05rem, 1.55vw, 1.35rem)', color: '#a7b3c9', lineHeight: 1.7 }}>
+          Real-time geomagnetic conditions from NOAA SWPC, interpreted for {isWorld ? 'global' : 'African'} GNSS, satellites, aviation, power grids, and CORS networks.
         </p>
         <div style={{ display: 'none' }}>
           {['🇿🇦 SANSA', '🇳🇬 NASRDA', '🇿🇼 ZINGSA', '🇪🇬 NARSS', '🌍 African CORS'].map(tag => (
@@ -765,8 +967,25 @@ export default function SpaceWeatherAfrica() {
         </div>
       </div>
 
-      <RegionSelector regionId={regionId} onChange={setRegionId} />
-      <SolarActivityMonitor />
+      <OperationalServicesNav
+        variant="cyan"
+        className="ops-nav--inline"
+        extraLinks={[
+          {
+            to: regionId === 'southern' || regionId === 'pan' || regionId === 'world'
+              ? '/cors?app=space-weather'
+              : '/cors?region=zimbabwe',
+            label: 'CORS Lab view',
+          },
+        ]}
+      />
+
+      <div className="sw-toolbar">
+        <RegionSelector regionId={regionId} onChange={setRegionId} />
+        <button type="button" className="sw-refresh-btn" onClick={fetchKp} disabled={loading} title="Refresh space weather">
+          <RefreshCw size={14} className={loading ? 'sw-spin' : ''} /> Refresh
+        </button>
+      </div>
 
       <div className="sw-top-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,288px) minmax(0,1fr)', gap: 16, marginBottom: 16 }}>
         <KpCard kp={kp} status={status} loading={loading} error={error} updated={updated} history={kpHistory} apiMode={apiMode} />
@@ -780,50 +999,9 @@ export default function SpaceWeatherAfrica() {
       <div style={{ marginBottom: 16 }}><EiaExplainerCard regionId={regionId} /></div>
       <ImpactPanel impacts={impacts} status={status} title={isWorld ? 'Global Impact Analysis' : 'Africa Impact Analysis'} />
 
-      {/* ── Footer: GNSS impact + Activity levels ── */}
-      <div className="sw-footer-bar">
-        <div className="sw-footer-section">
-          <div className="sw-footer-title">Impact on GNSS &amp; CORS Networks</div>
-          <div className="sw-footer-impacts">
-            {[
-              { icon: Satellite, label: 'R1 RTK Accuracy',     value: status.level > 1 ? 'Moderate Impact' : 'Nominal',       color: status.level > 1 ? '#f97316' : '#22c55e' },
-              { icon: Activity,  label: 'PPP Convergence',      value: status.level > 1 ? 'Slightly Slower' : 'Normal',        color: status.level > 1 ? '#f97316' : '#22c55e' },
-              { icon: Waves,     label: 'Ionospheric Delay',    value: status.level > 1 ? 'Increased' : 'Nominal',             color: status.level > 1 ? '#f97316' : '#22c55e' },
-              { icon: Zap,       label: 'Signal Scintillation', value: status.level > 2 ? 'Possible' : 'Low',                 color: status.level > 2 ? '#f97316' : '#22c55e' },
-              { icon: Radio,     label: 'HF Communication',     value: status.level > 2 ? 'Degraded' : 'Excellent',           color: status.level > 2 ? '#ef4444' : '#22c55e' },
-            ].map(({ icon: Icon, label, value, color }) => (
-              <div key={label} className="sw-footer-impact-item">
-                <Icon size={15} style={{ color, flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <div className="sw-footer-impact-label">{label}</div>
-                  <div className="sw-footer-impact-value" style={{ color }}>{value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="sw-footer-divider" />
-        <div className="sw-footer-section">
-          <div className="sw-footer-title">Solar Activity Levels</div>
-          <div className="sw-footer-levels">
-            {[
-              { color: '#22c55e', label: 'Low',      sub: 'Minimal Impact' },
-              { color: '#eab308', label: 'Moderate', sub: 'Minor Impact' },
-              { color: '#f97316', label: 'High',     sub: 'Strong Impact' },
-              { color: '#ef4444', label: 'Severe',   sub: 'Major Impact' },
-              { color: '#a855f7', label: 'Extreme',  sub: 'Extreme Impact' },
-            ].map(({ color, label, sub }) => (
-              <div key={label} className="sw-footer-level-item">
-                <span className="sw-footer-level-dot" style={{ background: color }} />
-                <div>
-                  <div style={{ color, fontSize: '0.68rem', fontWeight: 800 }}>{label}</div>
-                  <div style={{ color: '#64748b', fontSize: '0.58rem' }}>{sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <SolarActivityMonitor status={status} />
+
+      <SpaceWeatherSummary kp={kp} status={status} regionId={regionId} apiMode={apiMode} updated={updated} />
     </div>
   );
 }

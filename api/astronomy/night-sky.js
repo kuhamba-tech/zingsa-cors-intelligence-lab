@@ -255,7 +255,8 @@ export default async function handler(req, res) {
     const today = formatDateInput();
     return res.status(200).json({
       success: true,
-      status: 'AstronomyAPI Ready',
+      mode: 'local-ephemeris',
+      status: 'Local ephemeris ready',
       provider: 'ZINGSA Night Sky Viewer API',
       location: { ...DEFAULT_OBS, lat, lon, city },
       defaults: {

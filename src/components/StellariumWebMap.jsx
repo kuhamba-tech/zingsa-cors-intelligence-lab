@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Brain, Expand, LocateFixed, Moon, Sparkles, Telescope } from 'lucide-react';
+import { Expand, LocateFixed, Sparkles } from 'lucide-react';
 import { buildStellariumEmbedUrl, getStellariumContext } from '../services/stellariumApi.js';
 
 const DEFAULT_LAT = -17.83;
@@ -68,9 +68,6 @@ export default function StellariumWebMap({ defaultLat = DEFAULT_LAT, defaultLon 
     }
   };
 
-  const moon = context?.astronomy;
-  const planets = context?.planets_tonight || [];
-
   return (
     <section className="obs-stellarium-section">
       <div className="obs-stellarium-head">
@@ -111,65 +108,11 @@ export default function StellariumWebMap({ defaultLat = DEFAULT_LAT, defaultLon 
         <div className="obs-stellarium-overlay">
           <span>{context?.location?.city || 'Harare, Zimbabwe'}</span>
           <span>{Math.abs(lat).toFixed(2)}°{lat < 0 ? 'S' : 'N'} · {Math.abs(lon).toFixed(2)}°{lon < 0 ? 'W' : 'E'}</span>
+          {context?.astronomy?.sky_state_label && (
+            <span>{context.astronomy.sky_state_label}{context.astronomy.moon_phase_label ? ` · ${context.astronomy.moon_phase_label}` : ''}</span>
+          )}
           {loading && <span>Loading astronomy API…</span>}
         </div>
-      </div>
-
-      <div className="obs-stellarium-cards">
-        <article className="obs-stellarium-card">
-          <div className="obs-stellarium-card-head">
-            <Telescope size={16} />
-            <strong>Tonight&apos;s Visible Planets</strong>
-          </div>
-          <ul className="obs-stellarium-list">
-            {planets.map(p => (
-              <li key={p.name}>
-                <span className="obs-planet-symbol">{p.symbol}</span>
-                <div>
-                  <strong>{p.name}</strong>
-                  <span>{p.visibility} · {p.note}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="obs-stellarium-card">
-          <div className="obs-stellarium-card-head">
-            <Moon size={16} />
-            <strong>Current Moon Phase</strong>
-          </div>
-          <div className="obs-stellarium-moon">
-            <div className="obs-stellarium-moon-phase">{moon?.moon_phase_label || '—'}</div>
-            <div className="obs-stellarium-moon-meta">
-              <span>Illumination: {moon?.moon_illumination_pct ?? '—'}%</span>
-              <span>Rise: {moon?.moonrise || '—'}</span>
-              <span>Set: {moon?.moonset || '—'}</span>
-              <span className="obs-stellarium-source">{moon?.source || 'Open-Meteo Astronomy API'}</span>
-            </div>
-          </div>
-        </article>
-
-        <article className="obs-stellarium-card">
-          <div className="obs-stellarium-card-head">
-            <Brain size={16} />
-            <strong>Stellarium Web</strong>
-          </div>
-          <p className="obs-stellarium-card-copy">
-            Search objects, toggle constellation lines, and switch observation modes inside the embedded sky map.
-          </p>
-          <a
-            className="obs-stellarium-link"
-            href={embedUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open in Stellarium Web →
-          </a>
-          {context?.stellarium?.embed_url && (
-            <code className="obs-stellarium-api">GET /api/astronomy/stellarium</code>
-          )}
-        </article>
       </div>
     </section>
   );

@@ -1,6 +1,8 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Component, Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, CloudSun, Radio, AlertTriangle, Waves, Telescope } from 'lucide-react';
+import { OPERATIONAL_LINK_TARGETS } from './components/OperationalServicesNav.jsx';
+import { OpsHealthProvider, useOpsHealth } from './context/OpsHealthContext.jsx';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
 const AfricanCORSIntelligenceLabPage = lazy(() => import('./pages/AfricanCORSIntelligenceLabPage.jsx'));
@@ -18,6 +20,16 @@ const PAGES = [
   { id: 'observatory', path: '/observatory', label: 'Astronomy',              icon: Telescope },
 ];
 
+function navigateToPage(navigate, id, path) {
+  navigate(path || OPERATIONAL_LINK_TARGETS[id] || PAGES.find(p => p.id === id)?.path || '/');
+}
+
+function mainNavTarget(id, path, alertsPath) {
+  if (id === 'dashboard') return '/';
+  if (id === 'alerts') return alertsPath;
+  return OPERATIONAL_LINK_TARGETS[id] || path;
+}
+
 function PageLoader() {
   return (
     <div style={{ padding: 48, textAlign: 'center', color: '#94a3b8' }}>
@@ -26,11 +38,59 @@ function PageLoader() {
   );
 }
 
+class PageErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+
+  render() {
+    const { error } = this.state;
+    if (error) {
+      return (
+        <div style={{ padding: 48, maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ color: '#f8fafc', marginBottom: 12 }}>This page failed to load</h2>
+          <p style={{ color: '#94a3b8', lineHeight: 1.6, marginBottom: 20 }}>
+            {error.message || 'An unexpected error stopped this view from rendering.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 18px',
+              borderRadius: 10,
+              border: '1px solid rgba(167,139,250,0.4)',
+              background: 'rgba(167,139,250,0.12)',
+              color: '#e9d5ff',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Reload page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function AppShell() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const active = PAGES.find(p => p.path === pathname)?.id
-    || (pathname.startsWith('/cors') ? 'cors' : 'dashboard');
+  const { badgeCount, alertsPath } = useOpsHealth();
+  const active = PAGES.find(p => (p.path === '/' ? pathname === '/' : pathname.startsWith(p.path)))?.id
+    || 'dashboard';
 
   return (
     <div style={{ minHeight: '100vh', background: '#03071f' }}>
@@ -39,20 +99,33 @@ function AppShell() {
           type="button"
           onClick={() => navigate('/')}
           title="Zimbabwe National Geospatial and Space Agency"
-          style={{ background: 'none', border: 'none', padding: 0, marginRight: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          style={{
+            width: 68,
+            height: 68,
+            background: 'radial-gradient(circle at 50% 44%, rgba(37, 99, 235, 0.28), rgba(3, 7, 31, 0.04) 68%)',
+            border: '1px solid rgba(34, 211, 238, 0.2)',
+            borderRadius: 12,
+            padding: 6,
+            marginRight: 12,
+            cursor: 'pointer',
+            display: 'grid',
+            placeItems: 'center',
+          }}
         >
           <img
-            src="/zingsa-logo.png"
+            src="/zingsa-logo-official.png"
             alt="ZINGSA — Zimbabwe National Geospatial and Space Agency"
-            style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+            style={{ width: 58, height: 58, objectFit: 'contain', display: 'block' }}
           />
         </button>
         {PAGES.map(({ id, path, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
-            onClick={() => navigate(path)}
+            onClick={() => navigate(mainNavTarget(id, path, alertsPath))}
+            title={id === 'alerts' && badgeCount > 0 ? `${badgeCount} station or alert item(s) need review` : undefined}
             style={{
+              position: 'relative',
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: '1rem', fontWeight: 700,
               background: active === id ? (
@@ -77,21 +150,50 @@ function AppShell() {
           >
             <Icon size={16} />
             {label}
+            {id === 'alerts' && badgeCount > 0 && (
+              <span
+                aria-label={`${badgeCount} attention items`}
+                style={{
+                  marginLeft: 2,
+                  minWidth: 18,
+                  height: 18,
+                  padding: '0 5px',
+                  borderRadius: 9,
+                  background: '#ef4444',
+                  color: '#fff',
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  lineHeight: '18px',
+                  textAlign: 'center',
+                }}
+              >
+                {badgeCount > 9 ? '9+' : badgeCount}
+              </span>
+            )}
           </button>
         ))}
       </nav>
 
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<DashboardPage onNavigate={id => navigate(PAGES.find(p => p.id === id)?.path || '/')} />} />
-          <Route path="/cors" element={<AfricanCORSIntelligenceLabPage onNavigate={id => navigate(PAGES.find(p => p.id === id)?.path || '/')} />} />
-          <Route path="/weather" element={<SpaceWeatherAfrica />} />
-          <Route path="/ionosphere" element={<IonosphericConditionsMonitor />} />
-          <Route path="/alerts" element={<CorsAlertSystemPage />} />
-          <Route path="/observatory" element={<ObservatoryHubPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+      <PageErrorBoundary resetKey={pathname}>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardPage
+                  onNavigate={(id, path) => navigateToPage(navigate, id, path || (id === 'alerts' ? alertsPath : undefined))}
+                />
+              }
+            />
+            <Route path="/cors" element={<AfricanCORSIntelligenceLabPage />} />
+            <Route path="/weather" element={<SpaceWeatherAfrica />} />
+            <Route path="/ionosphere" element={<IonosphericConditionsMonitor />} />
+            <Route path="/alerts" element={<CorsAlertSystemPage />} />
+            <Route path="/observatory" element={<ObservatoryHubPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </PageErrorBoundary>
     </div>
   );
 }
@@ -99,7 +201,9 @@ function AppShell() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppShell />
+      <OpsHealthProvider>
+        <AppShell />
+      </OpsHealthProvider>
     </BrowserRouter>
   );
 }
