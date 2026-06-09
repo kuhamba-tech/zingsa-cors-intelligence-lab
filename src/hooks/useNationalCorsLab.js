@@ -128,8 +128,10 @@ export function useNationalCorsLab(searchParams, setSearchParams) {
     if (liveMode) params.set('live', '1');
     else params.set('live', '0');
     const next = params.toString();
-    if (next !== searchParams.toString()) setSearchParams(params, { replace: true });
-  }, [spaceWeatherView, stationId, regionId, liveMode, setSearchParams, searchParams]);
+    // Use functional form so searchParams is NOT a dependency — prevents the
+    // ping-pong where a Link navigation clears params and the effect re-fires.
+    setSearchParams(prev => (prev.toString() === next ? prev : params), { replace: true });
+  }, [spaceWeatherView, stationId, regionId, liveMode, setSearchParams]);
 
   const copyShareLink = useCallback(() => {
     const url = window.location.href;

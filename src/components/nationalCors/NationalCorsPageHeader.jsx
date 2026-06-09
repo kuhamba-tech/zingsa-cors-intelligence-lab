@@ -52,15 +52,14 @@ export default function NationalCorsPageHeader({
       </div>
 
       <nav className="cil-header-subnav" aria-label="Service navigation">
-        {HEADER_NAV.map(({ label, to }) => (
-          <Link
-            key={to}
-            to={to}
-            className={`cil-header-subnav-btn${isActive(to) ? ' active' : ''}`}
-          >
-            {label}
-          </Link>
-        ))}
+        {HEADER_NAV.map(({ label, to }) => {
+          const active = isActive(to);
+          return active ? (
+            <span key={to} className="cil-header-subnav-btn active" aria-current="page">{label}</span>
+          ) : (
+            <Link key={to} to={to} className="cil-header-subnav-btn">{label}</Link>
+          );
+        })}
       </nav>
     </header>
   );
