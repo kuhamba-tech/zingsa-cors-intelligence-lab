@@ -476,13 +476,14 @@ function AlertsView() {
 /* TAB: ANALYSIS */
 function AnalysisView() {
   const { alerts, mapStations, stationTableData, healthPayload, catalog } = useCorsAlertData();
-  const activeAlerts = alerts.filter(a => a.status === 'active');
+  const activeAlerts   = alerts.filter(a => a.status === 'active');
   const criticalAlerts = activeAlerts.filter(a => a.level === 'CRITICAL').length;
-  const warningAlerts = activeAlerts.filter(a => a.level === 'WARNING').length;
-  const operational = mapStations.filter(s => s.status === 'online' || s.status === 'warning').length;
-  const networkHealth = Math.round((operational / mapStations.length) * 100);
-  const avgSignal = Math.round(stationTableData.reduce((sum, st) => sum + st.gnssQuality, 0) / stationTableData.length);
-  const avgUptime = (stationTableData.reduce((sum, st) => sum + st.uptime, 0) / stationTableData.length).toFixed(1);
+  const warningAlerts  = activeAlerts.filter(a => a.level === 'WARNING').length;
+  const onlineStations = mapStations.filter(s => s.status === 'online').length;
+  const degradedStations = mapStations.filter(s => s.status === 'warning' || s.status === 'degraded').length;
+  const networkHealth  = mapStations.length ? Math.round((onlineStations / mapStations.length) * 100) : 0;
+  const networkUptime  = mapStations.length ? Math.round((onlineStations * 100 + degradedStations * 50) / mapStations.length) : 0;
+  const avgSignal = stationTableData.length ? Math.round(stationTableData.reduce((sum, st) => sum + st.gnssQuality, 0) / stationTableData.length) : 0;
   const priorityStations = React.useMemo(() => buildStationPriorityList(mapStations, 6), [mapStations]);
   const archiveDerived = healthPayload?.health_summary?.archive_derived ?? 0;
 
@@ -491,7 +492,7 @@ function AnalysisView() {
       tone: 'cyan',
       title: 'What The Data Shows',
       icon: 'DATA',
-      text: `ZimCORS is at ${networkHealth}% operational (${operational}/${mapStations.length} stations). ${criticalAlerts} critical and ${warningAlerts} warning alerts are active. ${archiveDerived} stations have RINEX-derived health; source: ${healthPayload ? healthTelemetryLabel(healthPayload) : 'health API'}.`,
+      text: `ZimCORS is at ${networkHealth}% network health (${onlineStations} online, ${degradedStations} degraded of ${mapStations.length}). ${criticalAlerts} critical and ${warningAlerts} warning alerts are active. ${archiveDerived} stations have RINEX-derived health; source: ${healthPayload ? healthTelemetryLabel(healthPayload) : 'health API'}.`,
     },
     {
       tone: 'orange',
@@ -569,7 +570,7 @@ function AnalysisView() {
         {[
           ['Network health', `${networkHealth}%`],
           ['Average signal quality', `${avgSignal}%*`],
-          ['Average uptime', `${avgUptime}%`],
+          ['Network uptime (weighted)', `${networkUptime}%`],
           ['Active alerts', activeAlerts.length],
         ].map(([label, value]) => (
           <div key={label} className="cas-analysis-metric">
@@ -1274,8 +1275,9 @@ function CorsAlertSystemPage() {
   const fmtDate = useCallback(d =>
     d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' }), []);
 
-  const operationalCount = networkStatus.operational ?? mapStations.filter(s => s.status === 'online' || s.status === 'warning').length;
-  const operationalPct = Math.round((operationalCount / mapStations.length) * 100);
+  const onlineCount    = mapStations.filter(s => s.status === 'online').length;
+  const degradedCount  = mapStations.filter(s => s.status === 'warning' || s.status === 'degraded').length;
+  const onlinePct      = mapStations.length ? Math.round((onlineCount / mapStations.length) * 100) : 0;
   const statusToneClass = networkStatus.tone === 'green' ? 'green' : networkStatus.tone === 'red' ? 'red' : 'orange';
   const corsMapTileProps = africaMapTileLayerProps(corsMapTileMode);
   const healthUpdatedAt = healthPayload?.analysis_date ? new Date(healthPayload.analysis_date) : null;
@@ -1414,11 +1416,11 @@ function CorsAlertSystemPage() {
 
               <div className="cas-stat-card">
                 <div className="cas-stat-left">
-                  <div className="cas-stat-label">Operational Stations</div>
+                  <div className="cas-stat-label">Stations Online</div>
                   <div className="cas-stat-value blue">
-                    {operationalCount} <span style={{ fontSize:'0.9rem', color:'#475569' }}>/ {mapStations.length}</span>
+                    {onlineCount} <span style={{ fontSize:'0.9rem', color:'#475569' }}>/ {mapStations.length}</span>
                   </div>
-                  <div className="cas-stat-note">{operationalPct}% operational</div>
+                  <div className="cas-stat-note">{onlinePct}% online · {degradedCount} degraded</div>
                 </div>
                 <div className="cas-stat-icon" style={{ background:'rgba(96,165,250,0.12)', color:'#60a5fa' }}>
                   <Radio size={22} />

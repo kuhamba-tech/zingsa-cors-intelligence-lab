@@ -76,7 +76,9 @@ export function summarizeZimHealth(healthPayload, stationIds) {
   const withData = rows.length;
   const operational = summary.operational ?? online + degraded;
   const operationalPct = total ? Math.round((operational / total) * 100) : null;
-  return { online, degraded, offline, operational, total, withData, operationalPct };
+  const healthPct      = total ? Math.round((online / total) * 100) : null;
+  const uptimePct      = total ? Math.round((online * 100 + degraded * 50) / total) : null;
+  return { online, degraded, offline, operational, total, withData, operationalPct, healthPct, uptimePct };
 }
 
 /** Lab / national CORS page status (no alert-demo overrides) */

@@ -92,7 +92,7 @@ export default function DashboardPage({ onNavigate }) {
 
   const loading = healthLoading || kpLoading;
   const totalStations = healthStats.total;
-  const healthPct = healthStats.operationalPct;
+  const healthPct = healthStats.healthPct ?? healthStats.operationalPct;
   const archiveDerived = healthPayload?.health_summary?.archive_derived;
   const hasStationIssues = stationIssues > 0;
   const hasActiveAlerts = alertCount > 0;

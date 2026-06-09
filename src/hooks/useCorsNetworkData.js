@@ -134,10 +134,11 @@ export function useCorsNetworkData() {
   );
 
   const avgUptime = useMemo(() => {
-    if (!stationTableData.length) return 99.2;
-    const sum = stationTableData.reduce((acc, st) => acc + st.uptime, 0);
-    return Math.round((sum / stationTableData.length) * 10) / 10;
-  }, [stationTableData]);
+    if (!mapStations.length) return 0;
+    const online   = mapStations.filter(s => s.status === 'online').length;
+    const degraded = mapStations.filter(s => s.status === 'warning' || s.status === 'degraded').length;
+    return Math.round((online * 100 + degraded * 50) / mapStations.length);
+  }, [mapStations]);
 
   const avgSignalQuality = useMemo(() => {
     if (!stationTableData.length) return 78;
