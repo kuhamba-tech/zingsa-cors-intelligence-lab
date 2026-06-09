@@ -5,6 +5,7 @@ import Sparkline from './Sparkline.jsx';
 import StationQualitySummary from './StationQualitySummary.jsx';
 import GnssIntegrityPanel from './GnssIntegrityPanel.jsx';
 import { DedicatedMonitorBanner, NationalCorsAnalysis } from './NationalCorsServicePanels.jsx';
+import NtripMonitorPanel from '../NtripMonitorPanel.jsx';
 import { stationColor } from './stationLabHelpers.js';
 import { APPLICATION_VIEWS, ANALYSIS_TABS, LAB_REGIONS } from '../../data/corsIntelligenceLabData.js';
 import { CORS_PERSONA_TABS } from '../../data/corsHealthPersonas.js';
@@ -305,7 +306,7 @@ export default function NationalCorsLabWorkspace({ lab }) {
           </section>
 
           <div className="cil-subnav">
-            {['Overview', 'Stations', 'Integrity', 'Analysis', 'Settings'].map(v => (
+            {['Overview', 'Stations', 'Integrity', 'Analysis', 'NTRIP', 'Settings'].map(v => (
               <button key={v} type="button" className={mapView === v.toLowerCase() ? 'active' : ''} onClick={() => setMapView(v.toLowerCase())}>{v}</button>
             ))}
           </div>
@@ -328,6 +329,8 @@ export default function NationalCorsLabWorkspace({ lab }) {
               regionLabel={region.label}
               date={analysisDate}
             />
+          ) : mapView === 'ntrip' ? (
+            <NtripMonitorPanel />
           ) : (
             <div className="cil-main-grid">
               <div className="cil-map-wrap">
