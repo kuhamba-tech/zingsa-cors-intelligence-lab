@@ -9,7 +9,7 @@ import {
   getStationsForRegion,
 } from '../data/corsIntelligenceLabData.js';
 import { buildCorsHealthSummaries, corsHealthRisk } from '../data/corsHealthPersonas.js';
-import { getCorsCatalog, getCorsDemoAnalysis, getCorsStationHealth } from '../services/corsApi.js';
+import { getCorsCatalog, getCorsDemoAnalysis } from '../services/corsApi.js';
 import { fetchLiveKp, getDemoSpaceWeather } from '../services/spaceWeatherApi.js';
 import { ZIMBABWE_CORS_STATIONS } from '../data/zimbabweCorsStations.js';
 import {
@@ -18,12 +18,15 @@ import {
   mapStationFromHealth,
   mergeMetricsWithHealth,
 } from '../utils/corsNetworkData.js';
+import { useOpsHealth } from '../context/OpsHealthContext.jsx';
 
 function isValidApp(id) {
   return APPLICATION_VIEWS.some(view => view.id === id);
 }
 
 export function useNationalCorsLab(searchParams, setSearchParams) {
+  // Reuse the single health API fetch from OpsHealthContext — same NTRIP probe as home page
+  const { healthPayload } = useOpsHealth();
   const [shareCopied, setShareCopied] = useState(false);
   const [liveMode, setLiveModeState] = useState(() => {
     const liveParam = searchParams.get('live');
@@ -68,7 +71,6 @@ export function useNationalCorsLab(searchParams, setSearchParams) {
   const [corsPersonaView, setCorsPersonaView] = useState('overview');
   const [gnssCatalog, setGnssCatalog] = useState(null);
   const [gnssRefreshing, setGnssRefreshing] = useState(false);
-  const [healthPayload, setHealthPayload] = useState(null);
   const [analysisStale, setAnalysisStale] = useState(false);
   const [lastRunInputs, setLastRunInputs] = useState({ date: '2024-04-01', time: '03:37' });
 
@@ -149,36 +151,26 @@ export function useNationalCorsLab(searchParams, setSearchParams) {
     setAnalysisStale(false);
     const station = stations.find(s => s.id === stationId);
     try {
-      const healthPromise = regionId === 'zimbabwe'
-        ? getCorsStationHealth({ country: 'Zimbabwe' }).catch(() => null)
-        : getCorsStationHealth({ country: region.label }).catch(() => null);
-
       if (liveMode) {
         if (regionId === 'madagascar') throw new Error('Madagascar CORS streams unavailable');
-        const [noaa, health] = await Promise.all([
-          fetchLiveKp().catch(() => getDemoSpaceWeather()),
-          healthPromise,
-        ]);
-        setHealthPayload(health);
-        setMetrics(mergeMetricsWithHealth(buildLiveIPMetrics(noaa, health, regionId, station?.name || stationId), health));
+        const noaa = await fetchLiveKp().catch(() => getDemoSpaceWeather());
+        // healthPayload comes from OpsHealthContext — same NTRIP probe as home page
+        setMetrics(mergeMetricsWithHealth(buildLiveIPMetrics(noaa, healthPayload, regionId, station?.name || stationId), healthPayload));
       } else {
-        const health = await healthPromise;
-        setHealthPayload(health);
         const demo = await getCorsDemoAnalysis({
           station: stationId,
           region: regionId,
           date: analysisDate,
           time: analysisTime,
           source: 'tec-analysis',
-        });
-        const nextMetrics = demo.metrics || generateDemoIPMetrics(regionId, station?.name || stationId);
+        }).catch(() => null); // 404/network failures degrade silently — demo metrics used as fallback
+        const nextMetrics = demo?.metrics || generateDemoIPMetrics(regionId, station?.name || stationId);
         if (selectedMethod === 'location') {
           nextMetrics.summary = `${nextMetrics.summary || ''} Location-based corridor analysis for ${station?.name || stationId} in ${region.label}.`.trim();
         } else {
           nextMetrics.summary = `${nextMetrics.summary || ''} Monitoring & analysis view for ${station?.name || stationId}.`.trim();
         }
-        setMetrics(mergeMetricsWithHealth(nextMetrics, health));
-        if (!demo.hasArchive && demo.message) setApiError(demo.message);
+        setMetrics(mergeMetricsWithHealth(nextMetrics, healthPayload));
       }
       setLastRunInputs({ date: analysisDate, time: analysisTime });
     } catch (err) {
@@ -187,7 +179,7 @@ export function useNationalCorsLab(searchParams, setSearchParams) {
     } finally {
       setLoading(false);
     }
-  }, [liveMode, regionId, stationId, stations, region.label, analysisDate, analysisTime, selectedMethod]);
+  }, [liveMode, regionId, stationId, stations, region.label, analysisDate, analysisTime, selectedMethod, healthPayload]);
 
   const refreshGnssCatalog = useCallback(async ({ refresh = false } = {}) => {
     setGnssRefreshing(true);
