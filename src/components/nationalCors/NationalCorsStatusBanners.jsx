@@ -4,6 +4,7 @@ import { healthTelemetryLabel, isSimulatedHealth } from '../../utils/corsNetwork
 export default function NationalCorsStatusBanners({
   liveMode,
   healthPayload,
+  ntripStatus,
   liveError,
   gnssCatalog,
   gnssRefreshing,
@@ -15,6 +16,21 @@ export default function NationalCorsStatusBanners({
 }) {
   return (
     <>
+      {liveMode && ntripStatus?.mode === 'live' && (
+        <div className="cil-alert-bar" style={{ background: ntripStatus.online ? 'rgba(29,158,117,0.08)' : 'rgba(239,68,68,0.08)', borderColor: ntripStatus.online ? 'rgba(29,158,117,0.35)' : 'rgba(239,68,68,0.35)', color: ntripStatus.online ? '#6ee7b7' : '#fca5a5' }}>
+          <strong style={{ color: ntripStatus.online ? '#34d399' : '#f87171', whiteSpace: 'nowrap' }}>
+            🛰 NTRIP Caster:
+          </strong>
+          <span>
+            {ntripStatus.online
+              ? `Online · ${ntripStatus.totalMountpoints} active stream${ntripStatus.totalMountpoints !== 1 ? 's' : ''} · ${ntripStatus.host}:${ntripStatus.port}`
+              : ntripStatus.unauthorized
+                ? `Authentication failed · check NTRIP_USERNAME / NTRIP_PASSWORD`
+                : `Offline · ${ntripStatus.host}:${ntripStatus.port}`}
+          </span>
+        </div>
+      )}
+
       {liveMode && healthPayload && !isSimulatedHealth(healthPayload) && (
         <div className="cil-alert-bar" style={{ background: 'rgba(29,158,117,0.08)', borderColor: 'rgba(29,158,117,0.35)', color: '#6ee7b7' }}>
           <strong style={{ color: '#34d399' }}>Live blend:</strong>

@@ -11,6 +11,7 @@ import {
 import { buildCorsHealthSummaries, corsHealthRisk } from '../data/corsHealthPersonas.js';
 import { getCorsCatalog, getCorsDemoAnalysis } from '../services/corsApi.js';
 import { fetchLiveKp, getDemoSpaceWeather } from '../services/spaceWeatherApi.js';
+import { getNtripStatus } from '../services/ntripApi.js';
 import { ZIMBABWE_CORS_STATIONS } from '../data/zimbabweCorsStations.js';
 import {
   buildBridgeMonitoringMetrics,
@@ -73,6 +74,7 @@ export function useNationalCorsLab(searchParams, setSearchParams) {
   const [gnssRefreshing, setGnssRefreshing] = useState(false);
   const [analysisStale, setAnalysisStale] = useState(false);
   const [lastRunInputs, setLastRunInputs] = useState({ date: '2024-04-01', time: '03:37' });
+  const [ntripStatus, setNtripStatus] = useState(null);
 
   const isCorsHealthMode = spaceWeatherView === 'cors-health';
   const isBridgeMonitoring = spaceWeatherView === 'bridge-monitoring';
@@ -153,10 +155,18 @@ export function useNationalCorsLab(searchParams, setSearchParams) {
     try {
       if (liveMode) {
         if (regionId === 'madagascar') throw new Error('Madagascar CORS streams unavailable');
-        const noaa = await fetchLiveKp().catch(() => getDemoSpaceWeather());
-        // healthPayload comes from OpsHealthContext — same NTRIP probe as home page
-        setMetrics(mergeMetricsWithHealth(buildLiveIPMetrics(noaa, healthPayload, regionId, station?.name || stationId), healthPayload));
+        const [noaa, ntrip] = await Promise.all([
+          fetchLiveKp().catch(() => getDemoSpaceWeather()),
+          getNtripStatus().catch(() => null),
+        ]);
+        setNtripStatus(ntrip);
+        const liveMetrics = buildLiveIPMetrics(noaa, healthPayload, regionId, station?.name || stationId);
+        const enriched = (ntrip?.mode === 'live' && ntrip.online)
+          ? { ...liveMetrics, summary: `${liveMetrics.summary} NTRIP caster online · ${ntrip.totalMountpoints} active stream${ntrip.totalMountpoints !== 1 ? 's' : ''}.` }
+          : liveMetrics;
+        setMetrics(mergeMetricsWithHealth(enriched, healthPayload));
       } else {
+        setNtripStatus(null);
         const demo = await getCorsDemoAnalysis({
           station: stationId,
           region: regionId,
@@ -326,5 +336,6 @@ export function useNationalCorsLab(searchParams, setSearchParams) {
     corsHealthMetrics,
     bridgeMonitoringMetrics,
     overviewPersonaSummary,
+    ntripStatus,
   };
 }

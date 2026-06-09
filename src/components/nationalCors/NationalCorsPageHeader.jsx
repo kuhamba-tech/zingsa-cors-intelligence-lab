@@ -36,8 +36,20 @@ export default function NationalCorsPageHeader({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="cil-mode-toggle">
-            <button type="button" className={`cil-mode-btn ${!liveMode ? 'active-demo' : ''}`} onClick={() => { setLiveMode(false); setApiError(null); }}>🟡 OFFLINE</button>
-            <button type="button" className={`cil-mode-btn ${liveMode ? 'active-live' : ''}`} onClick={() => { setLiveMode(true); setApiError(null); }}>🔴 LIVE</button>
+            <button
+              type="button"
+              className={`cil-mode-btn ${!liveMode ? 'active-demo' : ''}${!liveMode && loading ? ' connecting' : ''}`}
+              onClick={() => { setLiveMode(false); setApiError(null); }}
+            >
+              {!liveMode && loading ? '⟳ OFFLINE' : '🟡 OFFLINE'}
+            </button>
+            <button
+              type="button"
+              className={`cil-mode-btn ${liveMode ? 'active-live' : ''}${liveMode && loading ? ' connecting' : ''}`}
+              onClick={() => { setLiveMode(true); setApiError(null); }}
+            >
+              {liveMode && loading ? '⟳ CONNECTING…' : '🔴 LIVE'}
+            </button>
           </div>
           <button
             type="button"

@@ -40,6 +40,7 @@ export default function AfricanCORSIntelligenceLabPage() {
       <NationalCorsStatusBanners
         liveMode={lab.liveMode}
         healthPayload={lab.healthPayload}
+        ntripStatus={lab.ntripStatus}
         liveError={lab.liveError}
         gnssCatalog={lab.gnssCatalog}
         gnssRefreshing={lab.gnssRefreshing}
