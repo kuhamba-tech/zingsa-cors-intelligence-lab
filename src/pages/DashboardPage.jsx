@@ -187,7 +187,7 @@ export default function DashboardPage({ onNavigate }) {
       value: loading ? '…' : telemetryLive ? `${telemetryLive} live feed` : isSimulatedHealth(healthPayload) ? 'Archive / seed' : 'Live receivers',
       note: healthPayload && !isSimulatedHealth(healthPayload)
         ? 'Receiver telemetry merged with RINEX archive health'
-        : 'Set ZINGSA_HEALTH_TELEMETRY_URL or ZINGSA_HEALTH_TELEMETRY_SAMPLE=1 for live blend',
+        : 'Configure the live telemetry feed to enable live blend mode',
       color: '#1D9E75',
       icon: ShieldCheck,
       action: openAlertsHub,

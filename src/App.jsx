@@ -94,19 +94,20 @@ function AppShell() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#03071f' }}>
-      <nav style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderBottom: '1px solid rgba(127,119,221,0.18)', background: 'rgba(0,0,0,0.4)', flexWrap: 'wrap' }}>
+      <nav style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderBottom: '1px solid rgba(127,119,221,0.18)', background: 'rgba(0,0,0,0.4)', flexWrap: 'nowrap', overflowX: 'auto' }}>
         <button
           type="button"
           onClick={() => navigate('/')}
           title="Zimbabwe National Geospatial and Space Agency"
           style={{
-            width: 68,
-            height: 68,
+            width: 54,
+            height: 54,
             background: 'radial-gradient(circle at 50% 44%, rgba(37, 99, 235, 0.28), rgba(3, 7, 31, 0.04) 68%)',
             border: '1px solid rgba(34, 211, 238, 0.2)',
-            borderRadius: 12,
-            padding: 6,
-            marginRight: 12,
+            borderRadius: 10,
+            padding: 4,
+            marginRight: 8,
+            flexShrink: 0,
             cursor: 'pointer',
             display: 'grid',
             placeItems: 'center',
@@ -115,7 +116,7 @@ function AppShell() {
           <img
             src="/zingsa-logo-official.png"
             alt="ZINGSA — Zimbabwe National Geospatial and Space Agency"
-            style={{ width: 58, height: 58, objectFit: 'contain', display: 'block' }}
+            style={{ width: 46, height: 46, objectFit: 'contain', display: 'block' }}
           />
         </button>
         {PAGES.map(({ id, path, label, icon: Icon }) => (
@@ -126,8 +127,8 @@ function AppShell() {
             title={id === 'alerts' && badgeCount > 0 ? `${badgeCount} station or alert item(s) need review` : undefined}
             style={{
               position: 'relative',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: '1rem', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+              padding: '7px 11px', borderRadius: 9, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700,
               background: active === id ? (
                 id === 'weather' || id === 'ionosphere' ? 'rgba(34,211,238,0.12)' :
                 id === 'dashboard' || id === 'observatory' ? 'rgba(167,139,250,0.12)' :
