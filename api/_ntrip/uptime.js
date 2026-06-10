@@ -4,6 +4,7 @@
  * Requires Vercel KV storage (set KV_REST_API_URL + KV_REST_API_TOKEN).
  */
 import { kvAvailable, kvGet } from './_kv.mjs';
+import { logSnapshot } from './_logger.mjs';
 
 const OFFICIAL = [
   { id: 'ZINH', name: 'ZINGSA HQ'      },
@@ -99,6 +100,12 @@ export default async function handler(req, res) {
     kvGet('ntrip:state').catch(() => null),
     kvGet('ntrip:events').catch(() => null),
   ]);
+
+  // If KV was just connected and has no data yet, seed it immediately
+  // so the page shows real station statuses on first visit.
+  if (!storedState) {
+    logSnapshot().catch(() => {});
+  }
 
   const state  = storedState || {};
   const events = (allEvents  || []).filter(e => e.ts >= cutoff);
