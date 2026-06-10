@@ -163,15 +163,30 @@ export default function CorsHealthNetworkMap({
               } : undefined}
             >
               <Tooltip>
-                <strong>{st.id.replace(/_$/, '')} — {st.name}</strong>
-                <div>Status: {statusLabel(st.status)}</div>
-                {st.healthBasis && <div>{healthBasisLabel(st.healthBasis)}</div>}
-                {st.archiveCount != null && (
-                  <div>Archives: {st.archiveCount}{st.archiveLatest ? ` · latest ${st.archiveLatest}` : ''}</div>
-                )}
-                {st.network && <div>Network: {st.network}</div>}
-                <div>{st.lat.toFixed(4)}°, {st.lon.toFixed(4)}°</div>
-                {onStationSelect && <div style={{ marginTop: 4, color: '#22d3ee' }}>Click to select</div>}
+                <div style={{ minWidth: 200 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9em', marginBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 4 }}>
+                    {st.id.replace(/_$/, '')} — {st.name}
+                  </div>
+                  <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.82em' }}>
+                    <tbody>
+                      <tr><td style={{ color: '#94a3b8', paddingRight: 8, paddingBottom: 3 }}>Site Code</td><td style={{ fontWeight: 600 }}>{st.id.replace(/_$/, '')}</td></tr>
+                      <tr><td style={{ color: '#94a3b8', paddingRight: 8, paddingBottom: 3 }}>RTCM ID</td><td style={{ fontWeight: 600 }}>{st.refStat != null ? String(st.refStat).padStart(3, '0') : '—'}</td></tr>
+                      <tr><td style={{ color: '#94a3b8', paddingRight: 8, paddingBottom: 3 }}>Status</td>
+                        <td style={{ fontWeight: 700, color: statusLabel(st.status) === 'ONLINE' ? '#1D9E75' : statusLabel(st.status) === 'DEGRADED' ? '#EF9F27' : '#ef4444' }}>
+                          {statusLabel(st.status)}
+                        </td>
+                      </tr>
+                      <tr><td style={{ color: '#94a3b8', paddingRight: 8, paddingBottom: 3 }}>Network</td><td>{st.network || 'ZimCORS/ZINGSA'}</td></tr>
+                      <tr><td style={{ color: '#94a3b8', paddingRight: 8, paddingBottom: 3 }}>Latitude</td><td>{st.lat.toFixed(6)}°</td></tr>
+                      <tr><td style={{ color: '#94a3b8', paddingRight: 8, paddingBottom: 3 }}>Longitude</td><td>{st.lon.toFixed(6)}°</td></tr>
+                      <tr><td style={{ color: '#94a3b8', paddingRight: 8, paddingBottom: 3 }}>Height</td><td>{st.height != null ? `${st.height.toFixed(1)} m` : '—'}</td></tr>
+                      <tr><td style={{ color: '#94a3b8', paddingRight: 8, paddingBottom: 3 }}>Last Update</td>
+                        <td>{st.lastUpdate ? new Date(st.lastUpdate).toLocaleString() : new Date().toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  {onStationSelect && <div style={{ marginTop: 6, color: '#22d3ee', fontSize: '0.8em', textAlign: 'center' }}>Click to select</div>}
+                </div>
               </Tooltip>
             </CircleMarker>
             );
