@@ -73,15 +73,18 @@ export const ANALYSIS_METHODS = [
   { id: 'monitoring', tab: 'monitoring', icon: '📡', title: 'Monitoring & Analysis', desc: 'Real-time CORS health, TEC, scintillation, and ionospheric perturbation (IP) index.' },
 ];
 
+// import.meta.env is Vite-browser-only; guard so this file is also safe in Node.js API handlers
+const _env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+
 export const ZIMCORS_SERVICE = {
-  caster: import.meta.env.VITE_ZIMCORS_NTRIP_HOST || 'ntrip.zingsa.org.zw',
-  port: Number(import.meta.env.VITE_ZIMCORS_NTRIP_PORT) || 2101,
-  mountpointPattern: import.meta.env.VITE_ZIMCORS_MOUNTPOINT_PATTERN || '{STATION}_RTCM3',
-  datum: import.meta.env.VITE_ZIMCORS_DATUM || 'ITRF2014 · AFREF',
-  format: import.meta.env.VITE_ZIMCORS_FORMAT || 'RTCM 3.2 MSM',
+  caster: _env.VITE_ZIMCORS_NTRIP_HOST || 'ntrip.zingsa.org.zw',
+  port: Number(_env.VITE_ZIMCORS_NTRIP_PORT) || 2101,
+  mountpointPattern: _env.VITE_ZIMCORS_MOUNTPOINT_PATTERN || '{STATION}_RTCM3',
+  datum: _env.VITE_ZIMCORS_DATUM || 'ITRF2014 · AFREF',
+  format: _env.VITE_ZIMCORS_FORMAT || 'RTCM 3.2 MSM',
   products: ['Real-time RTK corrections', 'Hourly & daily RINEX', 'Network health telemetry', 'Ionospheric TEC context'],
-  supportEmail: import.meta.env.VITE_ZIMCORS_SUPPORT_EMAIL || 'cors@zingsa.org.zw',
-  supportOrg: import.meta.env.VITE_ZIMCORS_SUPPORT_ORG || 'ZINGSA Space Science · ZNGA',
+  supportEmail: _env.VITE_ZIMCORS_SUPPORT_EMAIL || 'cors@zingsa.org.zw',
+  supportOrg: _env.VITE_ZIMCORS_SUPPORT_ORG || 'ZINGSA Space Science · ZNGA',
 };
 
 export function buildNtripConnection(stationId) {
