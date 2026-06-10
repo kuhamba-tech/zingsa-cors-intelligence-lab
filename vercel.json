@@ -10,7 +10,7 @@
     }
   },
   "crons": [
-    { "path": "/api/ntrip/status", "schedule": "0 * * * *" }
+    { "path": "/api/ntrip/status", "schedule": "0 0 * * *" }
   ],
   "routes": [
     { "src": "^/api/(.+)$", "dest": "/api/[...path]?path=$1" },
