@@ -1,18 +1,24 @@
 /** GET /api/ntrip/stations — always live from NTRIP caster, no demo fallback */
 import { fetchCasterData } from './_live.mjs';
+import { ZIMBABWE_CORS_STATIONS } from '../../src/data/zimbabweCorsStations.js';
+
+const CATALOGUE = Object.fromEntries(
+  ZIMBABWE_CORS_STATIONS.map(s => [s.id.toUpperCase(), s])
+);
 
 function liveStations(streams) {
   return streams.map(s => {
-    const id = s.mountpoint.replace(/_.*/, '');
+    const id = s.mountpoint.replace(/_.*/, '').toUpperCase();
+    const cat = CATALOGUE[id] || {};
     const constellations = (s.navSystem || '').split('+').filter(Boolean);
     return {
       stationId:     id,
-      stationName:   s.identifier || id,
-      lat:           s.lat,
-      lon:           s.lon,
-      height:        null,
-      receiverModel: 'Unknown',
-      antennaModel:  'Unknown',
+      stationName:   cat.siteName || s.identifier || id,
+      lat:           cat.lat  ?? s.lat,
+      lon:           cat.lon  ?? s.lon,
+      height:        cat.height ?? null,
+      receiverModel: cat.receiver || 'Unknown',
+      antennaModel:  cat.antenna  || 'Unknown',
       constellations,
       health:        'unknown',
       mountpoint:    s.mountpoint,
