@@ -7,14 +7,24 @@ import { mockApiPlugin } from './mock-api.mjs';
 // process.loadEnvFile is available in Node.js 21+.
 try { process.loadEnvFile('.env'); } catch { /* .env missing or Node < 21 */ }
 
+// Proxy NTRIP API calls through the Vercel production deployment.
+// Port 2101 is often blocked on local networks, so local dev can't reach
+// the caster directly. Vercel's servers can, so proxying gives live data
+// without needing a direct TCP path to the caster locally.
+const VERCEL_ORIGIN = 'https://zingsa-national-cors.vercel.app';
+
 export default defineConfig({
   plugins: [react(), mockApiPlugin()],
   server: {
     port: 5174,
     proxy: {
-      // Active only when NTRIP routes are removed from lib/corsApiConfig.js API_ROUTES.
-      // Mock API plugin intercepts first; proxy runs only for unmatched requests.
-      '/api/ntrip': 'http://localhost:3001',
+      // NTRIP routes are removed from corsApiConfig.js API_ROUTES so the
+      // mock plugin does NOT intercept them — they fall through to this proxy.
+      '/api/ntrip': {
+        target: VERCEL_ORIGIN,
+        changeOrigin: true,
+        secure: true,
+      },
       '/ws/ntrip': { target: 'ws://localhost:3001', ws: true },
     },
   },
