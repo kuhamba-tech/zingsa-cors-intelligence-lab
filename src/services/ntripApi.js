@@ -52,6 +52,11 @@ export async function getStreamHistory(mountpoint) {
   return fetchJson(`/history?mountpoint=${encodeURIComponent(mountpoint)}`);
 }
 
+/** GET /api/ntrip/uptime?period=7d|30d|24h — station uptime % and event log */
+export async function getNtripUptime(period = '7d') {
+  return fetchJson(`/uptime?period=${period}`, 20_000);
+}
+
 // ── WebSocket live feed ────────────────────────────────────────
 
 const WS_URL = (() => {

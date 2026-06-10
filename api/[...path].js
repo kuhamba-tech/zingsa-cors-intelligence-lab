@@ -18,6 +18,7 @@ import ntripStations  from './_ntrip/stations.js';
 import ntripHealth    from './_ntrip/stream-health.js';
 import ntripAlerts    from './_ntrip/alerts.js';
 import ntripHistory   from './_ntrip/history.js';
+import ntripUptime    from './_ntrip/uptime.js';
 
 const ROUTES = {
   'gnss/station-health':    gnssHealth,
@@ -36,6 +37,7 @@ const ROUTES = {
   'ntrip/stream-health':    ntripHealth,
   'ntrip/alerts':           ntripAlerts,
   'ntrip/history':          ntripHistory,
+  'ntrip/uptime':           ntripUptime,
 };
 
 export default function handler(req, res) {

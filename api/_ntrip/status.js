@@ -1,5 +1,6 @@
 /** GET /api/ntrip/status — always live from NTRIP caster */
 import { fetchCasterData } from './_live.mjs';
+import { logSnapshot } from './_logger.mjs';
 
 export default async function handler(_req, res) {
   let live = null, liveErr = null;
@@ -42,4 +43,7 @@ export default async function handler(_req, res) {
     mode:              'live',
     fetchedAt:         live.fetchedAt,
   });
+
+  // Fire-and-forget: log current state to KV for uptime tracking (rate limited to 1/min)
+  logSnapshot().catch(() => {});
 }

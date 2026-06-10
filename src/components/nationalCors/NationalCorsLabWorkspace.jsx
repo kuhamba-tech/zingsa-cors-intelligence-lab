@@ -6,6 +6,8 @@ import StationQualitySummary from './StationQualitySummary.jsx';
 import GnssIntegrityPanel from './GnssIntegrityPanel.jsx';
 import { DedicatedMonitorBanner, NationalCorsAnalysis } from './NationalCorsServicePanels.jsx';
 import NtripMonitorPanel from '../NtripMonitorPanel.jsx';
+import CorsUptimePanel   from '../CorsUptimePanel.jsx';
+import CorsNetworkDistancesPanel from './CorsNetworkDistancesPanel.jsx';
 import { stationColor } from './stationLabHelpers.js';
 import { APPLICATION_VIEWS, ANALYSIS_TABS, LAB_REGIONS } from '../../data/corsIntelligenceLabData.js';
 import { CORS_PERSONA_TABS } from '../../data/corsHealthPersonas.js';
@@ -108,7 +110,7 @@ function buildStationHealthOverview({ healthPayload, metrics, corsMapStations })
   const stats = { online, degraded, offline, total };
   const stationTableData = buildStationTableData(mapStations);
   const thresholds = loadCorsAlertSettings().thresholds;
-  const alerts = buildAlertsFromStations(mapStations, { includeResolved: true, thresholds, stationTableData });
+  const alerts = buildAlertsFromStations(mapStations, { includeResolved: false, thresholds, stationTableData });
   const rawAlertSummary = buildAlertSummary(alerts);
   const activeAlertStats = summarizeActiveAlertsFromHealth(healthPayload, { thresholds });
   const critical = activeAlertStats.critical;
@@ -155,7 +157,7 @@ function buildStationHealthOverview({ healthPayload, metrics, corsMapStations })
       ['NTRIP Caster', healthPayload ? 'Online' : 'Awaiting API', '#22c55e'],
       ['Database', healthPayload ? 'Healthy' : 'Offline cache', '#22c55e'],
       ['Storage', `${archivePct}% Used`, archivePct >= 75 ? '#f59e0b' : '#22c55e'],
-      ['Backup', seedFallback ? `${seedFallback} seed fallback` : 'Up to date', seedFallback ? '#f59e0b' : '#22c55e'],
+      ['Backup', seedFallback ? `${seedFallback} station(s) no data` : 'Up to date', seedFallback ? '#f59e0b' : '#22c55e'],
       ['System Time', now.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }), '#cbd5e1'],
     ],
   };
@@ -306,8 +308,17 @@ export default function NationalCorsLabWorkspace({ lab }) {
           </section>
 
           <div className="cil-subnav">
-            {['Overview', 'Stations', 'Integrity', 'Analysis', 'NTRIP', 'Settings'].map(v => (
-              <button key={v} type="button" className={mapView === v.toLowerCase() ? 'active' : ''} onClick={() => setMapView(v.toLowerCase())}>{v}</button>
+            {[
+              ['overview', 'Overview'],
+              ['stations', 'Stations'],
+              ['integrity', 'Integrity'],
+              ['analysis', 'Analysis'],
+              ['ntrip', 'NTRIP'],
+              ['uptime', 'Uptime Log'],
+              ['distances', 'Network Distances'],
+              ['settings', 'Settings'],
+            ].map(([id, label]) => (
+              <button key={id} type="button" className={mapView === id ? 'active' : ''} onClick={() => setMapView(id)}>{label}</button>
             ))}
           </div>
 
@@ -331,6 +342,10 @@ export default function NationalCorsLabWorkspace({ lab }) {
             />
           ) : mapView === 'ntrip' ? (
             <NtripMonitorPanel />
+          ) : mapView === 'uptime' ? (
+            <div style={{ padding:'16px 0' }}><CorsUptimePanel /></div>
+          ) : mapView === 'distances' ? (
+            <CorsNetworkDistancesPanel />
           ) : (
             <div className="cil-main-grid">
               <div className="cil-map-wrap">
@@ -596,6 +611,11 @@ export default function NationalCorsLabWorkspace({ lab }) {
                       <strong className={alert.level.toLowerCase()}>{alert.level}</strong>
                     </div>
                   ))}
+                  {!stationHealthOverview.recentAlerts.length && (
+                    <div style={{ padding: '14px 0', color: '#64748b', fontSize: '0.72rem' }}>
+                      No live events — all monitored stations nominal.
+                    </div>
+                  )}
                 </Link>
 
                 <Link to="/alerts?tab=data-centre" className="cil-health-widget cil-health-widget-rinex">

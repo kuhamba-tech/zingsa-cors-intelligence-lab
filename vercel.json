@@ -5,10 +5,13 @@
   "outputDirectory": "dist",
   "functions": {
     "api/[...path].js": {
-      "excludeFiles": "{data/**,server/**,node_modules/**}",
+      "excludeFiles": "{data/cors-extracted/**,data/test-extract/**,server/**,node_modules/**}",
       "maxDuration": 30
     }
   },
+  "crons": [
+    { "path": "/api/ntrip/status", "schedule": "0 * * * *" }
+  ],
   "routes": [
     { "src": "^/api/(.+)$", "dest": "/api/[...path]?path=$1" },
     { "handle": "filesystem" },
