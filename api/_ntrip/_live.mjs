@@ -5,21 +5,25 @@
  */
 import net from 'node:net';
 
-const TIMEOUT_MS = 8_000;
+const TIMEOUT_MS = 10_000;
 
 function basicAuth(user, pass) {
   return Buffer.from(`${user}:${pass}`).toString('base64');
 }
 
 function buildRequest(host, port, user, pass) {
-  return (
-    `GET / HTTP/1.0\r\n` +
-    `Host: ${host}:${port}\r\n` +
-    `Ntrip-Version: Ntrip/2.0\r\n` +
-    `User-Agent: NTRIP ZINGSAMonitor/1.0\r\n` +
-    `Authorization: Basic ${basicAuth(user, pass)}\r\n` +
-    `\r\n`
-  );
+  // HTTP/1.0 + NTRIP/2.0 headers — compatible with both NTRIP/1.0 and 2.0 casters.
+  // Connection: close ensures the server sends the full sourcetable and closes.
+  return [
+    `GET / HTTP/1.0`,
+    `Host: ${host}:${port}`,
+    `Ntrip-Version: Ntrip/2.0`,
+    `User-Agent: NTRIP ZINGSAMonitor/1.0`,
+    `Authorization: Basic ${basicAuth(user, pass)}`,
+    `Connection: close`,
+    ``,
+    ``,
+  ].join('\r\n');
 }
 
 function parseSourcetable(raw, host, port) {
@@ -29,22 +33,22 @@ function parseSourcetable(raw, host, port) {
     if (!t.startsWith('STR;')) continue;
     const p = t.split(';');
     streams.push({
-      mountpoint:  p[1]  || '',
-      identifier:  p[2]  || '',
-      format:      p[3]  || '',
-      formatDetail:p[4]  || '',
-      carrier:     p[5]  || '',
-      navSystem:   p[7]  || '',
-      country:     p[8]  || '',
-      lat:         parseFloat(p[9])  || 0,
-      lon:         parseFloat(p[10]) || 0,
-      nmea:        p[11] === '1',
+      mountpoint:   p[1]  || '',
+      identifier:   p[2]  || '',
+      format:       p[3]  || '',
+      formatDetail: p[4]  || '',
+      carrier:      p[5]  || '',
+      navSystem:    p[7]  || '',
+      country:      p[8]  || '',
+      lat:          parseFloat(p[9])  || 0,
+      lon:          parseFloat(p[10]) || 0,
+      nmea:         p[11] === '1',
+      network:      p[18] || '',
     });
   }
 
-  // Check HTTP status — 401 means caster rejected credentials
   const statusLine = raw.split('\n')[0] || '';
-  const unauthorized = statusLine.includes('401');
+  const unauthorized = /401/.test(statusLine);
 
   return {
     online:            !unauthorized,
@@ -61,7 +65,9 @@ function parseSourcetable(raw, host, port) {
 
 /**
  * Connects to the NTRIP caster using env vars and returns sourcetable data.
- * Returns null if credentials are missing or connection fails.
+ * Returns null only when credentials are missing (env not set).
+ * Throws on connection/parse errors so callers can distinguish "no config"
+ * from "connection failed".
  */
 export async function fetchCasterData() {
   const host = process.env.NTRIP_HOST;
@@ -71,7 +77,7 @@ export async function fetchCasterData() {
 
   if (!host || !user || !pass) return null;
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let settled = false;
     let buf = '';
 
@@ -83,7 +89,18 @@ export async function fetchCasterData() {
       resolve(val);
     };
 
-    const timer = setTimeout(() => done(null), TIMEOUT_MS);
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { sock.destroy(); } catch { /* ignore */ }
+      reject(err);
+    };
+
+    const timer = setTimeout(
+      () => fail(new Error(`NTRIP caster ${host}:${port} timed out after ${TIMEOUT_MS}ms`)),
+      TIMEOUT_MS,
+    );
 
     const sock = net.connect({ host, port });
     sock.setTimeout(TIMEOUT_MS);
@@ -99,10 +116,14 @@ export async function fetchCasterData() {
       }
     });
 
-    sock.on('timeout', () => done(null));
-    sock.on('error',   () => done(null));
+    sock.on('timeout', () => fail(new Error(`NTRIP socket timeout to ${host}:${port}`)));
+    sock.on('error',   (err) => fail(new Error(`NTRIP connect error: ${err.message}`)));
     sock.on('close',   () => {
-      if (!settled) done(buf.length > 0 ? parseSourcetable(buf, host, port) : null);
+      if (!settled) {
+        // Server closed connection — parse whatever we have
+        if (buf.length > 0) done(parseSourcetable(buf, host, port));
+        else fail(new Error(`NTRIP caster ${host}:${port} closed connection without data`));
+      }
     });
   });
 }
