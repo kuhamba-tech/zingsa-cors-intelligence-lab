@@ -53,5 +53,6 @@ export function zimbabweStationsForApi() {
     network: 'ZimCORS/ZINGSA',
     ref_stat: s.refStat,
     sat_sys: s.satSys,
+    catalog_status: s.status, // fallback when no RINEX archive or telemetry is available
   }));
 }
