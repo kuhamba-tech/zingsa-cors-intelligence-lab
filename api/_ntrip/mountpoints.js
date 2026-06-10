@@ -1,63 +1,87 @@
 /** GET /api/ntrip/mountpoints — live sourcetable when NTRIP_HOST is set, demo otherwise */
 import { fetchCasterData } from './_live.mjs';
 
-const now = () => Date.now();
-
+// Mirrors the official 24-station Zimbabwe CORS catalogue in zimbabweCorsStations.js
 const DEMO_STATIONS = [
-  { id: 'HARA', name: 'Harare',      lat: -17.83, lon: 31.05, health: 95 },
-  { id: 'BULA', name: 'Bulawayo',    lat: -20.15, lon: 28.58, health: 88 },
-  { id: 'MUTA', name: 'Mutare',      lat: -18.97, lon: 32.65, health: 91 },
-  { id: 'GWER', name: 'Gweru',       lat: -19.45, lon: 29.82, health: 78 },
-  { id: 'MARA', name: 'Marondera',   lat: -18.19, lon: 31.55, health: 85 },
-  { id: 'KWEK', name: 'Kwekwe',      lat: -18.93, lon: 29.81, health: 62 },
-  { id: 'CHIT', name: 'Chitungwiza', lat: -18.00, lon: 31.08, health: 90 },
-  { id: 'MSVG', name: 'Masvingo',    lat: -20.07, lon: 30.83, health: 55 },
-  { id: 'KADO', name: 'Kadoma',      lat: -18.34, lon: 29.90, health: 0  },
-  { id: 'BIND', name: 'Bindura',     lat: -17.30, lon: 31.33, health: 82 },
-  { id: 'CENT', name: 'Centenary',   lat: -16.74, lon: 31.13, health: 0  },
-  { id: 'CHIR', name: 'Chipinge',    lat: -20.20, lon: 32.63, health: 71 },
+  { id: 'ZINH', name: 'ZINGSA HQ',     lat: -17.784831, lon: 31.050633, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'LUPA', name: 'Lupane',         lat: -18.946969, lon: 27.760742, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'MUTA', name: 'Mutare',         lat: -18.978298, lon: 32.677223, satSys: 'G+R',     status: 'online'   },
+  { id: 'BULA', name: 'Bulawayo',       lat: -20.165313, lon: 28.641143, satSys: 'G+R',     status: 'online'   },
+  { id: 'GWER', name: 'Gweru',          lat: -19.511952, lon: 29.840540, satSys: 'G+R',     status: 'online'   },
+  { id: 'HACY', name: 'Harare Central', lat: -17.825166, lon: 31.033511, satSys: 'G+R',     status: 'degraded' },
+  { id: 'MASV', name: 'Masvingo',       lat: -20.087758, lon: 30.831493, satSys: 'G+R',     status: 'online'   },
+  { id: 'HARA', name: 'Harare',         lat: -17.781409, lon: 31.048562, satSys: 'G+R',     status: 'online'   },
+  { id: 'CENT', name: 'Centenary',      lat: -16.731441, lon: 31.118830, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'KARO', name: 'Karoi',          lat: -16.818966, lon: 29.683646, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'KWEK', name: 'Kwekwe',         lat: -18.934503, lon: 29.803925, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'GOKW', name: 'Gokwe',          lat: -18.212485, lon: 28.932072, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'GSU_', name: 'GSU',            lat: -20.436025, lon: 29.274815, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'CHIR', name: 'Chiredzi',       lat: -21.045129, lon: 31.668645, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'CHIM', name: 'Chimanimani',    lat: -19.802664, lon: 32.870451, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'CHIV', name: 'Chivhu',         lat: -19.017959, lon: 30.895289, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'KARI', name: 'Kariba',         lat: -16.519462, lon: 28.790362, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'MUTO', name: 'Mutoko',         lat: -17.404525, lon: 32.219569, satSys: 'G',       status: 'online'   },
+  { id: 'TSHO', name: 'Tsholotsho',     lat: -19.770472, lon: 27.760891, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'VICF', name: 'Victoria Falls', lat: -17.926737, lon: 25.840540, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'GUTU', name: 'Gutu',           lat: -19.646095, lon: 31.147089, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'MATA', name: 'Mataga',         lat: -20.845278, lon: 30.193333, satSys: 'G',       status: 'degraded' },
+  { id: 'BEIT', name: 'Beitbridge',     lat: -22.210183, lon: 29.995249, satSys: 'G+R+E+C', status: 'online'   },
+  { id: 'BING', name: 'Binga',          lat: -17.625093, lon: 27.338172, satSys: 'G+R+E+C', status: 'online'   },
 ];
-const CONSTELLATIONS = ['GPS', 'GLONASS', 'Galileo', 'BeiDou'];
+
+const now = () => Date.now();
 
 function demoMountpoints() {
   return DEMO_STATIONS.map((s, i) => {
-    const online = s.health > 0;
+    const online = s.status === 'online';
+    const degraded = s.status === 'degraded';
+    const active = online || degraded;
+    const constellations = s.satSys.split('+').map(c =>
+      c === 'G' ? 'GPS' : c === 'R' ? 'GLONASS' : c === 'E' ? 'Galileo' : 'BeiDou'
+    );
     return {
       mountpoint:    `${s.id}_RTCM3`,
       identifier:    s.name,
-      format:        i % 2 === 0 ? 'RTCM 3.2' : 'RTCM 3.3',
+      format:        i % 3 === 0 ? 'RTCM 3.3' : 'RTCM 3.2',
       formatDetails: '1005(1),1077(1),1087(1),1097(1),1127(1)',
-      constellations: online ? CONSTELLATIONS.slice(0, 2 + (i % 3)) : [],
-      country: 'ZWE', lat: s.lat, lon: s.lon, network: 'ZINGSA', stationId: s.id,
+      constellations,
+      country: 'ZWE', lat: s.lat, lon: s.lon,
+      network: 'ZimCORS/ZINGSA',
+      stationId: s.id.replace(/_$/, ''),
       status: {
-        connected: online, healthScore: s.health,
-        latencyMs: online ? 150 + Math.round(Math.sin(i * 1.3) * 120 + 150) : null,
-        bytesPerSec: online ? 1200 + i * 80 : 0,
-        correctionAgeSec: online ? +(0.8 + i * 0.1).toFixed(1) : null,
-        bytesTotal: online ? 1_200_000 + i * 50000 : 0,
-        uptimeSec: online ? 3600 * (1 + i % 8) : 0,
-        typeCounts: online ? { 1005: 3600, 1077: 3600, 1087: 3600, 1097: 3600, 1127: 3600 } : {},
-        timestamp: now(),
+        connected:        active,
+        healthScore:      online ? Math.max(72, 98 - i * 1) : degraded ? 45 : 0,
+        latencyMs:        active ? 180 + Math.round(Math.sin(i * 1.4) * 100 + 100) : null,
+        bytesPerSec:      active ? 1100 + i * 60 : 0,
+        correctionAgeSec: active ? +(0.7 + i * 0.08).toFixed(2) : null,
+        bytesTotal:       active ? 1_400_000 + i * 55_000 : 0,
+        uptimeSec:        active ? 3600 * (2 + i % 10) : 0,
+        typeCounts:       active ? { 1005: 3600, 1077: 3600, 1087: 3600, 1097: 1800, 1127: 900 } : {},
+        timestamp:        now(),
       },
       station: {
-        stationId: s.id, stationName: s.name, lat: s.lat, lon: s.lon,
-        receiverModel: 'Leica GR50', antennaModel: 'LEIAR25 LEIT',
-        constellations: CONSTELLATIONS,
-        health: s.health >= 80 ? 'healthy' : s.health > 0 ? 'degraded' : 'offline',
+        stationId:    s.id.replace(/_$/, ''),
+        stationName:  s.name,
+        lat: s.lat, lon: s.lon,
+        receiverModel:  'Leica GR50',
+        antennaModel:   'LEIAR25 LEIT',
+        constellations,
+        health: online ? 'healthy' : degraded ? 'degraded' : 'offline',
       },
     };
   });
 }
 
 function liveMountpoints(streams) {
-  return streams.map((s, i) => ({
+  return streams.map(s => ({
     mountpoint:    s.mountpoint,
     identifier:    s.identifier || s.mountpoint,
     format:        s.format || 'RTCM 3.x',
     formatDetails: s.formatDetail || '',
     constellations: (s.navSystem || '').split('+').filter(Boolean),
-    country: s.country || '', lat: s.lat, lon: s.lon,
-    network: 'ZINGSA', stationId: s.mountpoint.replace(/_.*/, ''),
+    country: s.country || 'ZWE', lat: s.lat, lon: s.lon,
+    network: 'ZimCORS/ZINGSA',
+    stationId: s.mountpoint.replace(/_.*/, ''),
     status: {
       connected: true, healthScore: null,
       latencyMs: null, bytesPerSec: null,
@@ -65,7 +89,7 @@ function liveMountpoints(streams) {
       uptimeSec: null, typeCounts: {}, timestamp: now(),
     },
     station: {
-      stationId: s.mountpoint.replace(/_.*/, ''),
+      stationId:   s.mountpoint.replace(/_.*/, ''),
       stationName: s.identifier || s.mountpoint,
       lat: s.lat, lon: s.lon,
       receiverModel: 'Unknown', antennaModel: 'Unknown',

@@ -6,9 +6,9 @@ const DEMO = {
   name: 'ZINGSACORS',
   host: 'demo',
   port: 2101,
-  totalMountpoints: 12,
-  activeMountpoints: 10,
-  averageLatencyMs: 342,
+  totalMountpoints: 24,
+  activeMountpoints: 22,
+  averageLatencyMs: 298,
   networkHealth: 'healthy',
   mode: 'demo',
 };
