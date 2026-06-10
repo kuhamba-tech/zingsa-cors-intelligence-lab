@@ -1246,3 +1246,438 @@
   .icm2-sidebar-minimap { display: none; }
   .icm2-top-cards { grid-template-columns: 1fr 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ICM2 Tab Navigation (Monitor | TEC App)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.icm2-tab-nav {
+  display: flex;
+  gap: 4px;
+  padding: 10px 20px 0;
+  border-bottom: 1px solid rgba(34,211,238,0.12);
+  background: #060d1a;
+}
+
+.icm2-tab-btn {
+  padding: 8px 22px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #4a6080;
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+
+.icm2-tab-btn:hover { color: #94a3b8; }
+
+.icm2-tab-btn.active {
+  color: #00d4ff;
+  border-bottom-color: #00d4ff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ZGIIS TEC App Panel
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.tec-app-root {
+  background: #060d1a;
+  color: #c8d8ec;
+  padding: 20px 24px 32px;
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 600px;
+}
+
+/* Header */
+.tec-app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(0,212,255,0.14);
+}
+
+.tec-app-kicker {
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #00d4ff;
+  margin-bottom: 4px;
+}
+
+.tec-app-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #e2eeff;
+  margin: 0 0 4px;
+}
+
+.tec-app-sub {
+  font-size: 0.74rem;
+  color: #4a6080;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.tec-app-version-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.68rem;
+  color: #3a5070;
+  white-space: nowrap;
+  padding-top: 4px;
+}
+
+.tec-live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Space weather strip */
+.tec-sw-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tec-sw-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+.tec-sw-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #3a5070;
+  margin-bottom: 5px;
+}
+
+.tec-sw-value {
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* Warning / info messages */
+.tec-msg-box {
+  padding: 9px 14px;
+  border-radius: 7px;
+  font-size: 0.75rem;
+  margin-bottom: 8px;
+  border-left: 3px solid;
+}
+.tec-msg-box.ok       { background: rgba(0,255,136,0.06); border-color: #00ff88; color: #9fffcf; }
+.tec-msg-box.warn     { background: rgba(255,140,0,0.07); border-color: #ff8c00; color: #ffd580; }
+.tec-msg-box.critical { background: rgba(255,50,50,0.08); border-color: #ff4444; color: #ffaaaa; }
+
+/* Main grid (2 columns) */
+.tec-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* Panel card */
+.tec-panel {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.tec-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.tec-panel-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #22d3ee;
+  margin-bottom: 12px;
+}
+
+/* Chart tabs */
+.tec-chart-tabs {
+  display: flex;
+  gap: 4px;
+}
+.tec-chart-tabs button {
+  padding: 4px 10px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 5px;
+  color: #4a6080;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tec-chart-tabs button.active { background: rgba(0,212,255,0.14); border-color: rgba(0,212,255,0.35); color: #00d4ff; }
+
+.tec-chart-xaxis {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 8px;
+  font-size: 0.6rem;
+  color: #3a5070;
+}
+
+.tec-chart-note {
+  font-size: 0.62rem;
+  color: #3a5070;
+  margin-top: 4px;
+}
+
+/* TEC stats row */
+.tec-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tec-stat-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 7px;
+  padding: 8px 12px;
+}
+
+.tec-stat-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #334455;
+  margin-bottom: 4px;
+}
+
+.tec-stat-value {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+/* Section header with filter */
+.tec-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.tec-filter-tabs {
+  display: flex;
+  gap: 4px;
+}
+.tec-filter-tabs button {
+  padding: 4px 10px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px;
+  color: #4a6080;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tec-filter-tabs button.active {
+  background: rgba(0,212,255,0.12);
+  border-color: rgba(0,212,255,0.3);
+  color: #00d4ff;
+}
+
+/* Station grid */
+.tec-station-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tec-station-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-left: 3px solid;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.tec-station-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.tec-station-code {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #c8d8ec;
+}
+
+.tec-station-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.tec-station-name {
+  font-size: 0.7rem;
+  color: #6888aa;
+  margin-bottom: 2px;
+}
+
+.tec-station-coords {
+  font-size: 0.62rem;
+  color: #334455;
+  margin-bottom: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.tec-station-vtec {
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.tec-station-consts {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* Processing params */
+.tec-params-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tec-param-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.68rem;
+}
+
+.tec-param-key { color: #4a6080; }
+.tec-param-val { font-weight: 700; text-align: right; }
+
+/* Constellation coverage bars */
+.tec-const-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.tec-const-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tec-const-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.tec-const-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+  opacity: 0.85;
+}
+
+.tec-const-stat {
+  font-size: 0.62rem;
+  color: #3a5070;
+  white-space: nowrap;
+  min-width: 80px;
+  text-align: right;
+}
+
+/* Module cards */
+.tec-module-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.tec-module-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 7px;
+  cursor: default;
+}
+
+.tec-module-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.tec-module-title { font-size: 0.7rem; font-weight: 800; color: #c8d8ec; line-height: 1.2; }
+.tec-module-desc  { font-size: 0.6rem; color: #4a6080; margin-top: 2px; line-height: 1.35; }
+
+.tec-module-cyan   { border-left: 2px solid rgba(0,212,255,0.4); }
+.tec-module-green  { border-left: 2px solid rgba(0,255,136,0.4); }
+.tec-module-orange { border-left: 2px solid rgba(249,115,22,0.4); }
+.tec-module-purple { border-left: 2px solid rgba(168,85,247,0.4); }
+
+/* Footer */
+.tec-app-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.62rem;
+  color: #2a3a50;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .tec-main-grid { grid-template-columns: 1fr; }
+  .tec-module-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .tec-app-root { padding: 14px 12px 24px; }
+  .tec-sw-strip { grid-template-columns: repeat(2, 1fr); }
+  .tec-station-grid { grid-template-columns: repeat(2, 1fr); }
+  .tec-app-header { flex-direction: column; }
+  .tec-app-version-badge { display: none; }
+}

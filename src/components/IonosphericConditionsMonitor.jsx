@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Waves } from 'lucide-react';
 import OperationalServicesNav from './OperationalServicesNav.jsx';
+import TecAppPanel from './TecAppPanel.jsx';
 import { getIonosphereStatus } from '../services/corsApi.js';
 import { useOpsHealth } from '../context/OpsHealthContext.jsx';
 import { ZIMBABWE_CORS_STATIONS } from '../data/zimbabweCorsStations.js';
@@ -690,6 +691,7 @@ export default function IonosphericConditionsMonitor() {
   const [selectedStation, setSelectedStation] = useState(() => searchParams.get('station')?.toUpperCase() || 'HARA');
   const [mapLayer, setMapLayer] = useState('VTEC');
   const [mapConsts, setMapConsts] = useState({ GPS: true, Galileo: true, BeiDou: true, GLONASS: true });
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') === 'tec' ? 'tec' : 'monitor');
 
   const loadStatus = async (stationId = selectedStation) => {
     setLoading(true);
@@ -818,6 +820,26 @@ export default function IonosphericConditionsMonitor() {
           </div>
         )}
 
+        {/* ── Tab nav ── */}
+        <div className="icm2-tab-nav">
+          {[
+            { id: 'monitor', label: 'Monitor' },
+            { id: 'tec',     label: 'TEC App' },
+          ].map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              className={`icm2-tab-btn${activeTab === id ? ' active' : ''}`}
+              onClick={() => setActiveTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'tec' ? (
+          <TecAppPanel status={status} />
+        ) : (
         <div className="icm2-content">
 
           {/* ── Top 5 Cards ── */}
@@ -1207,6 +1229,7 @@ export default function IonosphericConditionsMonitor() {
           />
 
         </div>
+        )}
       </div>
     </div>
   );
