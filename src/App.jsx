@@ -1,16 +1,15 @@
-import React, { Component, Suspense, lazy } from 'react';
+import React, { Component } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, CloudSun, Radio, AlertTriangle, Waves, Telescope } from 'lucide-react';
 import { OPERATIONAL_LINK_TARGETS } from './components/OperationalServicesNav.jsx';
 import { OpsHealthProvider, useOpsHealth } from './context/OpsHealthContext.jsx';
 import TranslateSwitcher from './components/TranslateSwitcher.jsx';
-
-const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
-const AfricanCORSIntelligenceLabPage = lazy(() => import('./pages/AfricanCORSIntelligenceLabPage.jsx'));
-const SpaceWeatherAfrica = lazy(() => import('./components/SpaceWeatherAfrica.jsx'));
-const CorsAlertSystemPage = lazy(() => import('./pages/CorsAlertSystemPage.jsx'));
-const IonosphericConditionsMonitor = lazy(() => import('./components/IonosphericConditionsMonitor.jsx'));
-const ObservatoryHubPage = lazy(() => import('./pages/ObservatoryHubPage.jsx'));
+import DashboardPage from './pages/DashboardPage.jsx';
+import AfricanCORSIntelligenceLabPage from './pages/AfricanCORSIntelligenceLabPage.jsx';
+import SpaceWeatherAfrica from './components/SpaceWeatherAfrica.jsx';
+import CorsAlertSystemPage from './pages/CorsAlertSystemPage.jsx';
+import IonosphericConditionsMonitor from './components/IonosphericConditionsMonitor.jsx';
+import ObservatoryHubPage from './pages/ObservatoryHubPage.jsx';
 
 const PAGES = [
   { id: 'dashboard',   path: '/',            label: 'Dashboard',              icon: BarChart3 },
@@ -29,14 +28,6 @@ function mainNavTarget(id, path, alertsPath) {
   if (id === 'dashboard') return '/';
   if (id === 'alerts') return alertsPath;
   return OPERATIONAL_LINK_TARGETS[id] || path;
-}
-
-function PageLoader() {
-  return (
-    <div style={{ padding: 48, textAlign: 'center', color: '#94a3b8' }}>
-      Loading ZINGSA operations view…
-    </div>
-  );
 }
 
 class PageErrorBoundary extends Component {
@@ -173,24 +164,22 @@ function AppShell() {
       </nav>
 
       <PageErrorBoundary resetKey={pathname}>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <DashboardPage
-                  onNavigate={(id, path) => navigateToPage(navigate, id, path || (id === 'alerts' ? alertsPath : undefined))}
-                />
-              }
-            />
-            <Route path="/cors" element={<AfricanCORSIntelligenceLabPage />} />
-            <Route path="/weather" element={<SpaceWeatherAfrica />} />
-            <Route path="/ionosphere" element={<IonosphericConditionsMonitor />} />
-            <Route path="/alerts" element={<CorsAlertSystemPage />} />
-            <Route path="/observatory" element={<ObservatoryHubPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardPage
+                onNavigate={(id, path) => navigateToPage(navigate, id, path || (id === 'alerts' ? alertsPath : undefined))}
+              />
+            }
+          />
+          <Route path="/cors" element={<AfricanCORSIntelligenceLabPage />} />
+          <Route path="/weather" element={<SpaceWeatherAfrica />} />
+          <Route path="/ionosphere" element={<IonosphericConditionsMonitor />} />
+          <Route path="/alerts" element={<CorsAlertSystemPage />} />
+          <Route path="/observatory" element={<ObservatoryHubPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </PageErrorBoundary>
     </div>
   );

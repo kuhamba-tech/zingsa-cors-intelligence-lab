@@ -15,6 +15,19 @@ const VERCEL_ORIGIN = 'https://zingsa-national-cors.vercel.app';
 
 export default defineConfig({
   plugins: [react(), mockApiPlugin()],
+  build: {
+    // Single CSS bundle — avoids "Unable to preload CSS" on lazy route chunks in production
+    cssCodeSplit: false,
+    modulePreload: { polyfill: false },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-leaflet': ['leaflet', 'react-leaflet'],
+        },
+      },
+    },
+  },
   server: {
     port: 5174,
     proxy: {

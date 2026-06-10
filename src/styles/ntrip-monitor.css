@@ -151,6 +151,7 @@
   border: 1px solid var(--ntrip-border);
   border-radius: 12px;
   overflow: hidden;
+  overflow-x: auto;
   margin-bottom: 20px;
 }
 .ntrip-table {

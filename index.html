@@ -7,7 +7,20 @@
     <title>ZINGSA Space Science</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <!-- Map tile hosts — resolve DNS early so map pages render faster -->
+    <link rel="dns-prefetch" href="https://mt0.google.com" />
+    <link rel="dns-prefetch" href="https://mt1.google.com" />
+    <link rel="dns-prefetch" href="https://server.arcgisonline.com" />
+    <!-- Non-blocking font load: page renders with system font, swaps when ready -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>
@@ -20,8 +33,19 @@
           autoDisplay: false,
         }, 'google_translate_element');
       }
+      // Defer Google Translate until the app is loaded and the browser is idle,
+      // so it never competes with the main bundle for bandwidth.
+      window.addEventListener('load', function () {
+        var loadTranslate = function () {
+          var s = document.createElement('script');
+          s.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+          s.async = true;
+          document.body.appendChild(s);
+        };
+        if ('requestIdleCallback' in window) requestIdleCallback(loadTranslate, { timeout: 4000 });
+        else setTimeout(loadTranslate, 2500);
+      });
     </script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

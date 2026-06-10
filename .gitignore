@@ -7,3 +7,4 @@ dist
 data/cors-extracted/
 data/ntrip-store.json
 .vercel
+.env*

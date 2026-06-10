@@ -367,6 +367,53 @@
   border-radius: 50%;
 }
 
+/* PNT context */
+.gnss-pnt-context {
+  margin: 0 18px 18px;
+  padding: 14px 18px;
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  border-left: 3px solid rgba(99, 102, 241, 0.7);
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.gnss-pnt-context__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.gnss-pnt-context__label {
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #818cf8;
+}
+
+.gnss-pnt-context__tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #475569;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+
+.gnss-pnt-context__body {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  line-height: 1.7;
+}
+
+.gnss-pnt-context__body strong {
+  color: #c7d2fe;
+  font-weight: 800;
+}
+
 /* Summary */
 .gnss-summary {
   display: flex;

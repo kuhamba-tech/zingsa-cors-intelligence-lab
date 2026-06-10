@@ -668,3 +668,29 @@ body :is(.ops-nav--purple .ops-nav-link:hover, .ops-nav--orange .ops-nav-link:ho
   padding: 10px 16px;
   text-align: center;
 }
+
+/* ── Site-wide responsive layout (desktop + mobile) ───────────────────── */
+
+html, body { overflow-x: hidden; }
+
+/* Main top navigation: horizontal scroll with momentum on touch devices */
+.app-main-nav {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.25) transparent;
+}
+.app-main-nav::-webkit-scrollbar { height: 4px; }
+.app-main-nav::-webkit-scrollbar-thumb { background: rgba(34, 211, 238, 0.2); border-radius: 2px; }
+
+@media (max-width: 760px) {
+  .app-main-nav { padding: 8px 10px !important; gap: 4px !important; }
+  .app-main-nav-btn { padding: 9px 9px !important; font-size: 0.72rem !important; }
+  .app-main-nav > button:first-child { width: 42px !important; height: 42px !important; }
+  .app-main-nav > button:first-child img { width: 34px !important; height: 34px !important; }
+}
+
+/* Translate switcher: keep clear of content on phones */
+@media (max-width: 640px) {
+  .ts-root { bottom: 12px; right: 12px; }
+  .ts-panel { width: min(300px, calc(100vw - 24px)); max-height: 60vh; }
+}
