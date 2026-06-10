@@ -1,41 +1,45 @@
-/** GET /api/ntrip/status — live when NTRIP_HOST env var is set, demo otherwise */
+/** GET /api/ntrip/status — always live from NTRIP caster */
 import { fetchCasterData } from './_live.mjs';
 
-const DEMO = {
-  online: true,
-  name: 'ZINGSACORS',
-  host: 'demo',
-  port: 2101,
-  totalMountpoints: 24,
-  activeMountpoints: 22,
-  averageLatencyMs: 298,
-  networkHealth: 'healthy',
-  mode: 'demo',
-};
-
 export default async function handler(_req, res) {
-  const live = await fetchCasterData().catch(() => null);
+  let live = null, liveErr = null;
+  try { live = await fetchCasterData(); } catch (e) { liveErr = e; }
 
-  if (live) {
-    const health = live.unauthorized        ? 'auth-error'
-                 : !live.online             ? 'offline'
-                 : live.totalMountpoints === 0 ? 'unknown'
-                 : 'healthy';
-
-    return res.json({
-      online:            live.online,
-      unauthorized:      live.unauthorized || false,
-      name:              live.name,
-      host:              live.host,
-      port:              live.port,
-      totalMountpoints:  live.totalMountpoints,
-      activeMountpoints: live.activeMountpoints,
-      averageLatencyMs:  null,
-      networkHealth:     health,
-      mode:              'live',
-      fetchedAt:         live.fetchedAt,
+  if (liveErr) {
+    return res.status(503).json({
+      online: false,
+      error: liveErr.message,
+      mode: 'offline',
     });
   }
 
-  res.json(DEMO);
+  if (!live) {
+    return res.status(503).json({
+      online: false,
+      error: 'NTRIP credentials not configured (NTRIP_HOST / NTRIP_USERNAME / NTRIP_PASSWORD missing)',
+      mode: 'not-configured',
+    });
+  }
+
+  if (live.unauthorized) {
+    return res.status(401).json({
+      online: false,
+      unauthorized: true,
+      error: 'NTRIP caster authentication failed — check NTRIP_USERNAME and NTRIP_PASSWORD in Vercel env vars',
+      mode: 'auth-error',
+    });
+  }
+
+  res.json({
+    online:            live.online,
+    name:              live.name,
+    host:              live.host,
+    port:              live.port,
+    totalMountpoints:  live.totalMountpoints,
+    activeMountpoints: live.activeMountpoints,
+    averageLatencyMs:  null,
+    networkHealth:     live.totalMountpoints > 0 ? 'healthy' : 'unknown',
+    mode:              'live',
+    fetchedAt:         live.fetchedAt,
+  });
 }

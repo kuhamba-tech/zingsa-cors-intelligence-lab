@@ -1,13 +1,5 @@
-/** GET /api/ntrip/alerts — live caster-level alerts when NTRIP_HOST is set, demo otherwise */
+/** GET /api/ntrip/alerts — always live from NTRIP caster */
 import { fetchCasterData } from './_live.mjs';
-
-// Demo alerts reference the two degraded stations in the official 24-station catalogue
-const BASE_DEMO = [
-  { id:'a1', type:'STREAM_DEGRADED',  severity:'warning',  mountpoint:'HACY_RTCM3', message:'Stream health on HACY_RTCM3 (Harare Central) is degraded (score: 44/100). Elevated correction age detected.', resolved: false },
-  { id:'a2', type:'STREAM_DEGRADED',  severity:'warning',  mountpoint:'MATA_RTCM3', message:'Stream health on MATA_RTCM3 (Mataga) is degraded (score: 46/100). High latency on single-constellation receiver.',   resolved: false },
-  { id:'a3', type:'HIGH_LATENCY',     severity:'warning',  mountpoint:'HACY_RTCM3', message:'High correction latency on HACY_RTCM3: 640ms (threshold: 500ms).',                                                    resolved: false },
-  { id:'a4', type:'NO_RTCM_DATA',     severity:'warning',  mountpoint:'MATA_RTCM3', message:'No RTCM data from MATA_RTCM3 for 45s — single-GPS receiver, check signal environment.',                               resolved: true  },
-];
 
 export default async function handler(req, res) {
   let live = null, liveErr = null;
@@ -16,7 +8,7 @@ export default async function handler(req, res) {
   const activeOnly = req.query?.active !== 'false';
 
   if (liveErr) {
-    const alert = {
+    const alerts = [{
       id: 'caster-offline',
       type: 'CASTER_OFFLINE',
       severity: 'critical',
@@ -24,40 +16,48 @@ export default async function handler(req, res) {
       message: `NTRIP caster unreachable: ${liveErr.message}`,
       timestamp: now,
       resolved: false,
-    };
-    return res.json({ alerts: [alert], total: 1, mode: 'live' });
+    }];
+    return res.status(503).json({ alerts, total: alerts.length, mode: 'offline' });
   }
 
-  if (live !== null) {
-    const alerts = [];
-
-    if (live.unauthorized) {
-      alerts.push({
-        id: 'auth-failure',
-        type: 'AUTH_FAILURE',
-        severity: 'critical',
-        mountpoint: null,
-        message: 'NTRIP caster authentication failed — check NTRIP_USERNAME and NTRIP_PASSWORD.',
-        timestamp: now,
-        resolved: false,
-      });
-    } else if (!live.online) {
-      alerts.push({
-        id: 'caster-offline',
-        type: 'CASTER_OFFLINE',
-        severity: 'critical',
-        mountpoint: null,
-        message: `NTRIP caster ${live.host}:${live.port} is unreachable.`,
-        timestamp: now,
-        resolved: false,
-      });
-    }
-
-    const filtered = activeOnly ? alerts.filter(a => !a.resolved) : alerts;
-    return res.json({ alerts: filtered, total: filtered.length, mode: 'live' });
+  if (!live) {
+    const alerts = [{
+      id: 'not-configured',
+      type: 'NOT_CONFIGURED',
+      severity: 'critical',
+      mountpoint: null,
+      message: 'NTRIP credentials not configured — set NTRIP_HOST, NTRIP_PORT, NTRIP_USERNAME, NTRIP_PASSWORD in Vercel environment variables.',
+      timestamp: now,
+      resolved: false,
+    }];
+    return res.status(503).json({ alerts, total: alerts.length, mode: 'not-configured' });
   }
 
-  const demo = BASE_DEMO.map((a, i) => ({ ...a, timestamp: now - (i + 1) * 900_000 }));
-  const filtered = activeOnly ? demo.filter(a => !a.resolved) : demo;
-  res.json({ alerts: filtered, total: filtered.length, mode: 'demo' });
+  const alerts = [];
+
+  if (live.unauthorized) {
+    alerts.push({
+      id: 'auth-failure',
+      type: 'AUTH_FAILURE',
+      severity: 'critical',
+      mountpoint: null,
+      message: 'NTRIP caster authentication failed — check NTRIP_USERNAME and NTRIP_PASSWORD in Vercel env vars.',
+      timestamp: now,
+      resolved: false,
+    });
+  } else if (!live.online) {
+    alerts.push({
+      id: 'caster-offline',
+      type: 'CASTER_OFFLINE',
+      severity: 'critical',
+      mountpoint: null,
+      message: `NTRIP caster ${live.host}:${live.port} is unreachable.`,
+      timestamp: now,
+      resolved: false,
+    });
+  }
+  // Caster online — per-stream health alerts require persistent monitoring (not available in serverless)
+
+  const filtered = activeOnly ? alerts.filter(a => !a.resolved) : alerts;
+  res.json({ alerts: filtered, total: filtered.length, mode: 'live' });
 }

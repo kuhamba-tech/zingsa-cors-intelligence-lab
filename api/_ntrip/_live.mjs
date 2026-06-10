@@ -70,10 +70,11 @@ function parseSourcetable(raw, host, port) {
  * from "connection failed".
  */
 export async function fetchCasterData() {
-  const host = process.env.NTRIP_HOST;
-  const port = parseInt(process.env.NTRIP_PORT || '2101', 10);
-  const user = process.env.NTRIP_USERNAME;
-  const pass = process.env.NTRIP_PASSWORD;
+  // Strip BOM (U+FEFF) and whitespace that Vercel env var editors can silently inject
+  const host = (process.env.NTRIP_HOST || '').replace(/^﻿/, '').trim();
+  const port = parseInt((process.env.NTRIP_PORT || '2101').trim(), 10);
+  const user = (process.env.NTRIP_USERNAME || '').trim();
+  const pass = (process.env.NTRIP_PASSWORD || '').trim();
 
   if (!host || !user || !pass) return null;
 
