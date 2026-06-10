@@ -95,7 +95,7 @@ function AppShell() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#03071f' }}>
-      <nav style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderBottom: '1px solid rgba(127,119,221,0.18)', background: 'rgba(0,0,0,0.4)', flexWrap: 'nowrap', overflowX: 'auto' }}>
+      <nav className="app-main-nav" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderBottom: '1px solid rgba(127,119,221,0.18)', background: 'rgba(0,0,0,0.4)', flexWrap: 'nowrap', overflowX: 'auto' }}>
         <button
           type="button"
           onClick={() => navigate('/')}
@@ -124,6 +124,7 @@ function AppShell() {
           <button
             key={id}
             type="button"
+            className="app-main-nav-btn"
             onClick={() => navigate(mainNavTarget(id, path, alertsPath))}
             title={id === 'alerts' && badgeCount > 0 ? `${badgeCount} station or alert item(s) need review` : undefined}
             style={{

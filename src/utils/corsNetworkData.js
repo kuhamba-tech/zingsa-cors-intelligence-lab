@@ -42,7 +42,9 @@ export function isSimulatedHealth(payload) {
   if (src === 'telemetry-blend') return true;
   return (
     payload?.mode === 'simulated'
+    || payload?.mode === 'no-data'
     || src === 'hourly-seed'
+    || src === 'no-data'
     || src === 'rinex-archive-blend'
     || src === 'rinex-archive'
   );
@@ -59,9 +61,9 @@ export function healthTelemetryLabel(payload) {
   if (src === 'rinex-archive-blend') {
     const derived = payload?.health_summary?.archive_derived ?? 0;
     const fallback = payload?.health_summary?.seed_fallback ?? 0;
-    return `RINEX archive recency for ${derived} station(s); hourly seed for ${fallback} without indexed files`;
+    return `RINEX archive recency for ${derived} station(s); ${fallback} station(s) offline — no telemetry or indexed files`;
   }
-  if (src === 'hourly-seed') return 'Hourly-seed status until live receivers or RINEX index coverage is available';
+  if (src === 'hourly-seed' || src === 'no-data') return 'No live telemetry or RINEX index — stations shown as offline until live data is available';
   return 'Live receiver telemetry';
 }
 
@@ -159,7 +161,7 @@ export function gnssQualityLabel(quality) {
 export function healthBasisLabel(basis) {
   if (basis === 'telemetry') return 'Live receiver telemetry';
   if (basis === 'rinex-archive') return 'RINEX archive recency';
-  if (basis === 'seed') return 'Hourly seed (no archive)';
+  if (basis === 'seed' || basis === 'no-data') return 'No data (no telemetry or archive)';
   return 'Health API';
 }
 

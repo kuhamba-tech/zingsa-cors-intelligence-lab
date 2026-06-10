@@ -364,3 +364,62 @@
   .cil-health-event-row strong { display: none; }
 }
 .cil-embedded-lab { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--cil-border); }
+
+/* ── CORS Network Distances ─────────────────────────────────────────── */
+.cil-dist-section { margin: 0 0 20px; }
+.cil-dist-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; align-items: stretch; }
+.cil-dist-map-wrap { position: relative; height: 520px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: #0a1628; }
+.cil-dist-map-title { position: absolute; top: 12px; left: 52px; z-index: 500; pointer-events: none; color: #e0f2fe; font-size: 0.82rem; font-weight: 900; text-shadow: 0 1px 8px rgba(0,0,0,0.9); }
+.cil-dist-map-title span { color: #94a3b8; font-weight: 600; }
+.cil-dist-style-toggle { position: absolute; top: 12px; right: 12px; z-index: 500; display: flex; gap: 4px; background: rgba(3,7,31,0.82); border: 1px solid rgba(255,255,255,0.14); border-radius: 9px; padding: 4px; }
+.cil-dist-style-toggle button { background: transparent; border: 1px solid transparent; border-radius: 7px; padding: 5px 9px; color: #94a3b8; font-size: 0.64rem; font-weight: 800; cursor: pointer; }
+.cil-dist-style-toggle button.active { background: rgba(34,211,238,0.18); border-color: rgba(34,211,238,0.45); color: #e0f2fe; }
+.cil-dist-legend { position: absolute; bottom: 12px; left: 12px; z-index: 500; background: rgba(3,7,31,0.85); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 8px 11px; backdrop-filter: blur(8px); font-size: 0.65rem; color: #cbd5e1; }
+.cil-dist-legend div { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.cil-dist-legend-title { font-size: 0.6rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0 !important; }
+.cil-dist-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.cil-dist-legend .dot.cors { background: #22c55e; }
+.cil-dist-legend .dot.ref { background: #0ea5e9; box-shadow: 0 0 0 2px rgba(34,211,238,0.6); }
+.cil-dist-km { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; color: #f8fafc; font-size: 0.6rem; font-weight: 700; text-shadow: 0 0 4px #000, 0 0 6px #000, 0 1px 3px #000; pointer-events: none; }
+.cil-dist-station-label { display: inline-block; white-space: nowrap; color: #fef9c3; font-size: 0.62rem; font-weight: 800; text-shadow: 0 0 4px #000, 0 0 6px #000, 0 1px 3px #000; pointer-events: none; }
+.cil-dist-station-label.ref { color: #7dd3fc; font-size: 0.7rem; }
+.cil-dist-table-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); background: linear-gradient(180deg, rgba(8,14,32,0.96), rgba(4,8,20,0.98)); min-height: 480px; }
+.cil-dist-table-head { display: flex; align-items: center; justify-content: space-between; }
+.cil-dist-table-head h4 { margin: 0; color: #f8fafc; font-size: 0.86rem; font-weight: 900; }
+.cil-dist-table-head button { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); border-radius: 7px; padding: 4px 9px; color: #cbd5e1; font-size: 0.78rem; cursor: pointer; }
+.cil-dist-table-head button:hover { background: rgba(34,211,238,0.15); color: #e0f2fe; }
+.cil-dist-table-panel input[type='search'] { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 7px 10px; color: #e2e8f0; font-size: 0.7rem; outline: none; }
+.cil-dist-table-panel input[type='search']:focus { border-color: rgba(34,211,238,0.45); }
+.cil-dist-table-scroll { flex: 1; overflow-y: auto; }
+.cil-dist-table-scroll table { width: 100%; border-collapse: collapse; font-size: 0.68rem; }
+.cil-dist-table-scroll th { position: sticky; top: 0; background: #0b1430; color: #94a3b8; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; text-align: left; padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.cil-dist-table-scroll td { padding: 6px 8px; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.cil-dist-table-scroll td:last-child { color: #e0f2fe; font-weight: 700; }
+.cil-dist-table-scroll tbody tr:hover { background: rgba(34,211,238,0.07); }
+.cil-dist-pager { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
+.cil-dist-pager button { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 10px; color: #94a3b8; font-size: 0.64rem; font-weight: 800; cursor: pointer; }
+.cil-dist-pager button.active { background: rgba(34,211,238,0.2); border-color: rgba(34,211,238,0.5); color: #e0f2fe; }
+.cil-dist-pager button:disabled { opacity: 0.4; cursor: default; }
+.cil-dist-footer { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin-top: 14px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.08); }
+.cil-dist-footer > div { display: flex; flex-direction: column; gap: 3px; padding: 11px 14px; background: rgba(6,10,26,0.97); }
+.cil-dist-footer small { color: #64748b; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.cil-dist-footer strong { color: #e2e8f0; font-size: 0.8rem; font-weight: 900; }
+@media (max-width: 1100px) {
+  .cil-dist-grid { grid-template-columns: 1fr; }
+  .cil-dist-table-panel { min-height: 0; }
+  .cil-dist-table-scroll { max-height: 380px; }
+  .cil-dist-footer { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .cil-dist-map-wrap { height: 380px; }
+  .cil-dist-map-title { left: 50px; font-size: 0.7rem; max-width: 45%; }
+  .cil-dist-style-toggle button { padding: 6px 8px; font-size: 0.6rem; }
+  .cil-dist-legend { padding: 6px 9px; font-size: 0.6rem; }
+  .cil-dist-km { font-size: 0.54rem; }
+  .cil-dist-station-label { font-size: 0.56rem; }
+  .cil-dist-table-scroll { max-height: 320px; }
+  .cil-dist-table-scroll th, .cil-dist-table-scroll td { padding: 8px 6px; }
+  .cil-dist-pager button { padding: 7px 12px; }
+  .cil-dist-footer { grid-template-columns: 1fr 1fr; }
+  .cil-dist-footer strong { font-size: 0.72rem; }
+}

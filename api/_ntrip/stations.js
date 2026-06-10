@@ -1,4 +1,4 @@
-/** GET /api/ntrip/stations — always live from NTRIP caster */
+/** GET /api/ntrip/stations — always live from NTRIP caster, no demo fallback */
 import { fetchCasterData } from './_live.mjs';
 
 function liveStations(streams) {
@@ -38,6 +38,6 @@ export default async function handler(_req, res) {
     return res.status(401).json({ stations: [], total: 0, mode: 'auth-error', error: 'Authentication failed' });
   }
 
-  const stations = liveStations(live.streams);
+  const stations = liveStations(live.streams || []);
   res.json({ stations, total: stations.length, mode: 'live', fetchedAt: live.fetchedAt });
 }
