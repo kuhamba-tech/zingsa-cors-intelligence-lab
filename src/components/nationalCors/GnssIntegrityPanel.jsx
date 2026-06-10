@@ -181,6 +181,23 @@ export default function GnssIntegrityPanel({ metrics, station, regionLabel, date
         </div>
       </div>
 
+      <div className="cil-gnss-pnt-context">
+        <div className="cil-gnss-pnt-context__header">
+          <span className="cil-gnss-pnt-context__label">PNT NETWORK CONTEXT</span>
+          <span className="cil-gnss-pnt-context__tag">Position · Navigation · Timing</span>
+        </div>
+        <p className="cil-gnss-pnt-context__body">
+          Position, Navigation, and Timing (PNT) are critical for location-based applications.
+          The ZINGSA CORS network simultaneously tracks all four global GNSS constellations —{' '}
+          <strong>GPS</strong>, <strong>GLONASS</strong>, <strong>Galileo</strong>, and <strong>BeiDou</strong>.
+          At any given moment the network observes at minimum two frequencies (<strong>L1 / L2</strong>) from
+          GPS and GLONASS, guaranteeing a robust dual-frequency baseline for RTK and PPP corrections.
+          Galileo and BeiDou observations extend geometric diversity, strengthen ionospheric modelling,
+          and improve ambiguity resolution — increasing reliability and redundancy across the network
+          and on all rover receivers operating within it.
+        </p>
+      </div>
+
       <div className="cil-gnss-summary">
         <div className="cil-gnss-icon small">🤖</div>
         <div>
