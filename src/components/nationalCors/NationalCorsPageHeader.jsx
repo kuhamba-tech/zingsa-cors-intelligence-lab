@@ -1,13 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
 import { Radio, RefreshCw } from 'lucide-react';
-
-const HEADER_NAV = [
-  { label: 'Dashboard',    to: '/' },
-  { label: 'dji_m300_rtk_setup', to: '/cors' },
-  { label: 'trimble_r12i_setup', to: '/ionosphere' },
-  { label: 'rinex_data_guide', to: '/alerts' },
-];
 
 export default function NationalCorsPageHeader({
   liveMode,
@@ -17,18 +9,8 @@ export default function NationalCorsPageHeader({
   loading,
   gnssRefreshing,
 }) {
-  const { pathname, search } = useLocation();
-  const isActive = (to) => {
-    const [path, qs] = to.split('?');
-    if (qs) {
-      const tab = new URLSearchParams(qs).get('tab');
-      return pathname.startsWith(path) && new URLSearchParams(search).get('tab') === tab;
-    }
-    return path === '/' ? pathname === '/' : pathname.startsWith(path) && !new URLSearchParams(search).get('tab');
-  };
-
   return (
-    <header className="cil-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
+    <header className="cil-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Radio size={22} color="#ff8c00" />
@@ -41,7 +23,7 @@ export default function NationalCorsPageHeader({
               className={`cil-mode-btn ${!liveMode ? 'active-demo' : ''}${!liveMode && loading ? ' connecting' : ''}`}
               onClick={() => { setLiveMode(false); setApiError(null); }}
             >
-              {!liveMode && loading ? '⟳ OFFLINE' : '🟡 OFFLINE'}
+              {!liveMode && loading ? '⟳ RINEX' : '📁 RINEX'}
             </button>
             <button
               type="button"
@@ -62,17 +44,6 @@ export default function NationalCorsPageHeader({
           </button>
         </div>
       </div>
-
-      <nav className="cil-header-subnav" aria-label="Service navigation">
-        {HEADER_NAV.map(({ label, to }) => {
-          const active = isActive(to);
-          return active ? (
-            <span key={to} className="cil-header-subnav-btn active" aria-current="page">{label}</span>
-          ) : (
-            <Link key={to} to={to} className="cil-header-subnav-btn">{label}</Link>
-          );
-        })}
-      </nav>
     </header>
   );
 }

@@ -32,7 +32,7 @@ export default function StationQualitySummary({
           <div className="cil-quality-breadcrumb">ZimCORS / Station network</div>
           <h3 className="cil-section-title">Station Quality Summary</h3>
         </div>
-        <span className="cil-quality-mode">{liveMode ? 'Live API status' : 'Offline / RINEX session'}</span>
+        <span className="cil-quality-mode">{liveMode ? 'Live API status' : 'RINEX archive session'}</span>
       </div>
       <div className="cil-quality-cards">
         {rows.map(row => (

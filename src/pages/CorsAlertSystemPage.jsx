@@ -1347,7 +1347,9 @@ function CorsAlertSystemPage() {
         </div>
       </nav>
 
-      {false && (
+      <OperationalServicesNav variant="orange" stationId={selectedStation} />
+
+      {healthPayload && (
         <div className={`cas-live-banner${isSimulatedHealth(healthPayload) ? ' simulated' : ''}`}>
           {isSimulatedHealth(healthPayload) ? (
             <>
@@ -1399,7 +1401,7 @@ function CorsAlertSystemPage() {
           <>
             {error && (
               <div className="cas-info-banner" style={{ marginBottom: 16, borderColor: 'rgba(249,115,22,0.35)', color: '#fdba74' }}>
-                Using cached demo overlays — API: {error}
+                RINEX catalog or analysis API unavailable ({error}). Station map and alerts still use the health API when available.
               </div>
             )}
             {/* Stats row */}

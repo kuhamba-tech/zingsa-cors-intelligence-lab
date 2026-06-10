@@ -353,7 +353,7 @@ export default function NationalCorsLabWorkspace({ lab }) {
                   <div style={{ padding: 24, height: '100%', minHeight: 380, display: 'flex', flexDirection: 'column', gap: 16, background: 'rgba(0,0,0,0.25)' }}>
                     <h3 className="cil-section-title" style={{ margin: 0 }}>Network Settings</h3>
                     <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.7 }}>
-                      <p style={{ margin: '0 0 12px' }}><strong style={{ color: '#22d3ee' }}>Mode:</strong> {liveMode ? 'LIVE' : 'OFFLINE'}</p>
+                      <p style={{ margin: '0 0 12px' }}><strong style={{ color: '#22d3ee' }}>Mode:</strong> {liveMode ? 'LIVE' : 'RINEX archive'}</p>
                       <p style={{ margin: '0 0 12px' }}><strong style={{ color: '#22d3ee' }}>Region:</strong> {region.label}</p>
                       <p style={{ margin: '0 0 12px' }}><strong style={{ color: '#22d3ee' }}>GNSS source:</strong> TEC Analysis RINEX archive</p>
                       {gnssCatalog && (
@@ -485,7 +485,7 @@ export default function NationalCorsLabWorkspace({ lab }) {
                   <>
                     <h3 className="cil-section-title" style={{ marginBottom: 16 }}>Dashboard Settings</h3>
                     {[
-                      ['Analysis mode', liveMode ? 'LIVE' : 'OFFLINE'],
+                      ['Analysis mode', liveMode ? 'LIVE' : 'RINEX archive'],
                       ['Application', applicationLabel],
                       ['Selected station', stationId],
                       ['Analysis date', analysisDate],

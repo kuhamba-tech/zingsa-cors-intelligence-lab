@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, Waves } from 'lucide-react';
 import OperationalServicesNav from './OperationalServicesNav.jsx';
@@ -727,11 +727,28 @@ export default function IonosphericConditionsMonitor() {
   }, [searchParams, selectedStation, corsStations]);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (selectedStation && selectedStation !== 'HARA') params.set('station', selectedStation);
-    const next = params.toString();
-    if (next !== searchParams.toString()) setSearchParams(params, { replace: true });
-  }, [selectedStation, setSearchParams, searchParams]);
+    const urlTab = searchParams.get('tab') === 'tec' ? 'tec' : 'monitor';
+    setActiveTab(prev => (prev === urlTab ? prev : urlTab));
+  }, [searchParams]);
+
+  const changeTab = useCallback((id) => {
+    setActiveTab(id);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (id === 'monitor') next.delete('tab');
+      else next.set('tab', id);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (selectedStation && selectedStation !== 'HARA') next.set('station', selectedStation);
+      else next.delete('station');
+      return next.toString() === prev.toString() ? prev : next;
+    }, { replace: true });
+  }, [selectedStation, setSearchParams]);
   const stationPos = status.positions || STATION_POS;
   const primaryStation = status.station || selectedStation || 'HARA';
   const primaryName = corsStations.find(s => s.id === primaryStation)?.name || 'Harare';
@@ -830,7 +847,7 @@ export default function IonosphericConditionsMonitor() {
               key={id}
               type="button"
               className={`icm2-tab-btn${activeTab === id ? ' active' : ''}`}
-              onClick={() => setActiveTab(id)}
+              onClick={() => changeTab(id)}
             >
               {label}
             </button>

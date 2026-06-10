@@ -48,7 +48,7 @@ export function NationalServiceHero({
           {metrics.ipLevel && <> · Ionospheric perturbation <strong style={{ color: metrics.ipColor }}>{metrics.ipLevel}</strong></>}
         </p>
         <div className="cil-national-chips">
-          <span className={`cil-national-chip ${liveMode ? 'live' : 'demo'}`}>{liveMode ? 'Live monitoring' : 'Offline / RINEX analysis'}</span>
+          <span className={`cil-national-chip ${liveMode ? 'live' : 'demo'}`}>{liveMode ? 'Live monitoring' : 'RINEX archive analysis'}</span>
           <span className="cil-national-chip">AFREF · IGS · NTRIP</span>
           <span className="cil-national-chip muted">Updated {updated}</span>
         </div>
@@ -77,7 +77,7 @@ function buildNationalCorsAnalysis({
 
   return {
     headline,
-    summary: `${applicationLabel} for ${stationName} (${regionId === 'zimbabwe' ? 'Zimbabwe' : regionId}): ${onlineCount}/${total} stations online (${healthPct}% health). IP index ${metrics?.ipIndex ?? '—'}/100 (${metrics?.ipLevel || '—'}). ${liveMode ? 'Live NOAA Kp and health API feeds are active.' : 'Offline mode is analysing indexed RINEX archives for the selected session.'}`,
+    summary: `${applicationLabel} for ${stationName} (${regionId === 'zimbabwe' ? 'Zimbabwe' : regionId}): ${onlineCount}/${total} stations online (${healthPct}% health). IP index ${metrics?.ipIndex ?? '—'}/100 (${metrics?.ipLevel || '—'}). ${liveMode ? 'Live NOAA Kp and health API feeds are active.' : 'RINEX archive mode is analysing indexed observation files for the selected session.'}`,
     mapNote: regionId === 'zimbabwe'
       ? 'The map shows all ZimCORS reference stations. Click a marker or table row to monitor a site and open integrity details.'
       : 'This region shows reference ionosphere context. Full ZimCORS health mapping is available for Zimbabwe.',
@@ -97,7 +97,7 @@ function buildNationalCorsAnalysis({
       ? isSimulatedHealth(healthPayload)
         ? `LIVE mode · ${healthTelemetryLabel(healthPayload)} · ${healthPayload?.analysis_date ? new Date(healthPayload.analysis_date).toISOString().slice(11, 16) : '—'} UTC`
         : `Live blend · health updated ${healthPayload?.analysis_date ? new Date(healthPayload.analysis_date).toISOString().slice(11, 16) : '—'} UTC`
-      : 'Offline / RINEX archive session — connect LIVE APIs for operational decisions',
+      : 'RINEX archive session — switch to LIVE for operational telemetry',
   };
 }
 

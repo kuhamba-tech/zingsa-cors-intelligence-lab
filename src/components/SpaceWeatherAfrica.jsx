@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Activity, MapPin, Radio, RefreshCw, Satellite, Sun, Waves, Zap } from 'lucide-react';
 import OperationalServicesNav from './OperationalServicesNav.jsx';
 import { AFRICAN_REGIONS, AFRICAN_SATELLITES_AT_RISK, AFRICAN_MONITORING_CENTRES } from '../data/africaSpaceWeatherData.js';
@@ -874,9 +874,9 @@ function SpaceWeatherSummary({ kp, status, regionId, apiMode, updated }) {
         {updated && <> Last refresh: {formatZimbabweDateTime(updated)}.</>}
       </p>
       <ul>
-        <li>Use the ionosphere monitor for station-level TEC, scintillation, and RTK guidance.</li>
-        <li>Use National CORS Services for ZimCORS network health, NTRIP access, and station integrity.</li>
-        <li>Enable alert notifications on the CORS Alert System when Kp rises above operational thresholds.</li>
+        <li><Link to="/ionosphere?region=southern">Ionospheric Conditions</Link> — station-level TEC, scintillation, and RTK guidance.</li>
+        <li><Link to="/cors?app=cors-health">National CORS Services</Link> — ZimCORS network health, NTRIP access, and station integrity.</li>
+        <li><Link to="/alerts">CORS Alert System</Link> — enable notifications when Kp rises above operational thresholds.</li>
       </ul>
     </section>
   );

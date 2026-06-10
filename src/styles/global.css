@@ -229,6 +229,30 @@ button, select, input { font-family: inherit; }
   margin-top: 16px;
 }
 
+.dashboard-data-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  margin: 0 0 16px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  background: rgba(234, 179, 8, 0.08);
+  font-size: 0.76rem;
+  color: #fde68a;
+  line-height: 1.5;
+}
+
+.dashboard-data-banner strong {
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.dashboard-data-banner span {
+  color: #fcd34d;
+}
+
 .dashboard-status-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 18px 0;

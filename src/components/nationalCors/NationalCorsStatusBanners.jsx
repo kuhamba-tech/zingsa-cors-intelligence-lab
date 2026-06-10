@@ -41,6 +41,16 @@ export default function NationalCorsStatusBanners({
         </div>
       )}
 
+      {liveMode && healthPayload && isSimulatedHealth(healthPayload) && (
+        <div className="cil-alert-bar" style={{ background: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.35)', color: '#fde68a' }}>
+          <strong style={{ color: '#fbbf24' }}>Archive-backed health:</strong>
+          <span>
+            {healthTelemetryLabel(healthPayload)} via <strong>GET /api/gnss/station-health</strong>.
+            {' '}Configure receiver telemetry for live station status.
+          </span>
+        </div>
+      )}
+
       {liveError && (
         <div className="cil-alert-bar"><strong>{liveError.type}:</strong><span>{liveError.message}</span></div>
       )}

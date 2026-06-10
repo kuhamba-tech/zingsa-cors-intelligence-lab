@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { BarChart3, CloudSun, Database, Radio, RefreshCw, ShieldCheck, Telescope, Waves } from 'lucide-react';
-import { fetchLiveKp, getDemoSpaceWeather } from '../services/spaceWeatherApi.js';
+import { fetchAfricaSpaceWeather, fetchLiveKp, getDemoSpaceWeather } from '../services/spaceWeatherApi.js';
 import OperationalServicesNav, { OPERATIONAL_LINK_TARGETS } from '../components/OperationalServicesNav.jsx';
 import { useOpsHealth } from '../context/OpsHealthContext.jsx';
-import { healthTelemetryLabel } from '../utils/corsNetworkData.js';
+import { healthTelemetryLabel, isSimulatedHealth } from '../utils/corsNetworkData.js';
 
 const dashboardLinks = [
   {
@@ -83,10 +83,20 @@ export default function DashboardPage({ onNavigate }) {
   const refreshKp = useCallback(async () => {
     setKpLoading(true);
     try {
-      const space = await fetchLiveKp().catch(() => getDemoSpaceWeather());
+      let space;
+      try {
+        space = await fetchAfricaSpaceWeather();
+      } catch {
+        space = await fetchLiveKp();
+      }
       setKp(Number(space?.kp_index) || 2);
-      setKpMode(space?.mode || 'demo');
+      setKpMode(space?.mode || 'live');
       setKpUpdated(space?.timestamp ? new Date(space.timestamp) : null);
+    } catch {
+      const demo = getDemoSpaceWeather();
+      setKp(demo.kp_index);
+      setKpMode('demo');
+      setKpUpdated(demo.timestamp ? new Date(demo.timestamp) : null);
     } finally {
       setKpLoading(false);
     }
@@ -99,8 +109,9 @@ export default function DashboardPage({ onNavigate }) {
   }, [refreshKp]);
 
   const loading = healthLoading || kpLoading;
+  const healthUnavailable = !healthLoading && !healthPayload;
   const totalStations = networkMetrics.total;
-  const healthPct = networkMetrics.healthPct;
+  const healthPct = healthPayload ? networkMetrics.healthPct : null;
   const archiveDerived = healthPayload?.health_summary?.archive_derived;
   const hasStationIssues = stationIssues > 0;
   const hasActiveAlerts = alertCount > 0;
@@ -123,10 +134,12 @@ export default function DashboardPage({ onNavigate }) {
   const statusCards = [
     {
       label: 'ZimCORS Network',
-      value: loading ? '…' : `${networkMetrics.online}/${totalStations} online`,
-      note: healthPayload
-        ? `Network health ${onlinePct ?? '—'}% · ${networkMetrics.degraded} degraded · ${networkMetrics.offline} offline · ${healthTelemetryLabel(healthPayload)}`
-        : 'Zimbabwe station health and integrity',
+      value: healthUnavailable ? 'Unavailable' : loading ? '…' : `${networkMetrics.online}/${totalStations} online`,
+      note: healthUnavailable
+        ? 'Station-health API did not respond — open National CORS or retry refresh'
+        : healthPayload
+          ? `Network health ${onlinePct ?? '—'}% · ${networkMetrics.degraded} degraded · ${networkMetrics.offline} offline · ${healthTelemetryLabel(healthPayload)}`
+          : 'Zimbabwe station health and integrity',
       color: onlinePct == null ? '#22d3ee' : onlinePct >= 80 ? '#1D9E75' : '#EF9F27',
       icon: Radio,
       action: () => openPage('cors'),
@@ -200,13 +213,15 @@ export default function DashboardPage({ onNavigate }) {
               <strong>
                 {loading
                   ? 'Updating…'
-                  : networkMetrics.offline > 0
-                    ? `${networkMetrics.offline} station${networkMetrics.offline === 1 ? '' : 's'} offline`
-                    : hasActiveAlerts
-                      ? `${networkMetrics.alertCount} active alert${networkMetrics.alertCount === 1 ? '' : 's'}`
-                      : healthPct >= 70
-                        ? 'Operational'
-                        : 'Review'}
+                  : healthUnavailable
+                    ? 'Health API unavailable'
+                    : networkMetrics.offline > 0
+                      ? `${networkMetrics.offline} station${networkMetrics.offline === 1 ? '' : 's'} offline`
+                      : hasActiveAlerts
+                        ? `${networkMetrics.alertCount} active alert${networkMetrics.alertCount === 1 ? '' : 's'}`
+                        : healthPct >= 70
+                          ? 'Operational'
+                          : 'Review'}
               </strong>
               {!loading && healthPayload && (hasStationIssues || hasActiveAlerts) && (
                 <small style={{ display: 'block', color: '#94a3b8', fontSize: '0.72rem', marginTop: 4 }}>
@@ -220,6 +235,14 @@ export default function DashboardPage({ onNavigate }) {
         </div>
       </section>
 
+      <OperationalServicesNav variant="cyan" className="ops-nav--inline dashboard-ops-nav" />
+
+      {healthPayload && isSimulatedHealth(healthPayload) && (
+        <div className="dashboard-data-banner" role="status">
+          <strong>Archive-backed network health</strong>
+          <span>{healthTelemetryLabel(healthPayload)}</span>
+        </div>
+      )}
 
       <section className="dashboard-status-grid" aria-label="Operational status">
         {statusCards.map(({ label, value, note, color, icon: Icon, action }) => (
