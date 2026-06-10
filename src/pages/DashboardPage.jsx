@@ -25,8 +25,8 @@ const dashboardLinks = [
   {
     id: 'weather',
     title: 'Space Weather',
-    eyebrow: 'Africa alerts',
-    desc: 'Review African space weather risk, ionospheric impacts, sector alerts, and monitoring centers.',
+    eyebrow: 'National, Africa and Global',
+    desc: 'National, Africa and Global space weather risk, ionospheric impacts, sector alerts, and monitoring centers.',
     icon: CloudSun,
     color: '#22d3ee',
   },
@@ -41,10 +41,19 @@ const dashboardLinks = [
   {
     id: 'observatory',
     title: 'Astronomy Observatory',
-    eyebrow: 'Mazowe observatory',
-    desc: 'Stellarium sky map, telescope simulator, and night sky viewer for Mazowe observatory operations.',
+    eyebrow: 'Observatory',
+    desc: 'Stellarium sky map, telescope simulator, and night sky viewer for observatory operations.',
     icon: Telescope,
     color: '#a78bfa',
+  },
+  {
+    id: 'tec',
+    title: 'TEC App',
+    eyebrow: 'TEC analysis',
+    desc: 'Local-made application for Total Electron Content measurement in Zimbabwe.',
+    icon: Database,
+    color: '#22d3ee',
+    path: '/ionosphere?tab=tec',
   },
 ];
 
@@ -234,7 +243,7 @@ export default function DashboardPage({ onNavigate }) {
       </section>
 
       <section className="dashboard-link-grid" aria-label="Dashboard navigation">
-        {dashboardLinks.map(({ id, title, eyebrow, desc, icon: Icon, color }) => {
+        {dashboardLinks.map(({ id, title, eyebrow, desc, icon: Icon, color, path }) => {
           const linkDesc = id === 'alerts' && !healthLoading && (hasActiveAlerts || hasStationIssues)
             ? `${desc} ${
               hasActiveAlerts
@@ -246,7 +255,7 @@ export default function DashboardPage({ onNavigate }) {
             ? alertsPath
             : id === 'cors' && networkMetrics.offline > 0
               ? '/cors?app=cors-health'
-              : undefined;
+              : path;
           return (
           <article key={id} className="dashboard-link-card" style={{ '--accent': color }}>
             <div className="dashboard-link-head">
